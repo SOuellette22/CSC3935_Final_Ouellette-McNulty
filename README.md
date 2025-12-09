@@ -44,24 +44,6 @@ For this project, we will be using the Real-Time Streaming Protocol (RTSP). We w
    <SDP_body>
    ```
 
-### Announce 
- - This allows a client to add things to the server (upload media).
- - Example of how the messages are structured:
-   ```
-   C -> S
-   ANNOUNCE rtsp://server/path RTSP/1.0
-   CSeq: x
-   Content-Type: application-sdp
-   Content-Length: nnn
-
-   <SDP_body>
-
-   ------------------------------
-   S -> C
-   RTSP/1.0 200 OK
-   CSeq: x
-   ```
-
 ### Setup
  - This allows a client to set up a transport mechanism to be used for streaming media.
  - Example of how the messages are structured:
