@@ -112,6 +112,23 @@ For this project, we will be using the Real-Time Streaming Protocol (RTSP). We w
    Session: <session_id>
    ```
 
+### Record
+ - This allows a client actually to upload the media to the server.
+ - Example of how the messages are structured:
+   ```
+   C -> S
+   RECORD rtsp://server/media RTSP/1.0
+   CSeq: x
+   Session: <session_id>
+   Range: clock=20250101T120000Z
+   
+   ------------------------------
+   S -> C
+   RTSP/1.0 200 OK
+   CSeq: x
+   Session: <session_id>
+   ```
+
 ### Teardown
  - This allows a client to tear down a session with the given server.
  - Example of how the messages are structured:
