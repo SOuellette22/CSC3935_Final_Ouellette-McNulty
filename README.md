@@ -4,6 +4,8 @@
 
 For this project, we will be using the Real-Time Streaming Protocol (RTSP). We will not use the entire protocol; just a portion, to make it viable to code within the project's time frame.
 
+[RFC2326 Link](https://datatracker.ietf.org/doc/html/rfc2326#section-10.1)
+
 ## Installation
 
 **This will come later**
@@ -42,24 +44,6 @@ For this project, we will be using the Real-Time Streaming Protocol (RTSP). We w
    Content-Type: application/sdp
    Content-Length: nnn
    <SDP_body>
-   ```
-
-### Announce 
- - This allows a client to add things to the server (upload media).
- - Example of how the messages are structured:
-   ```
-   C -> S
-   ANNOUNCE rtsp://server/path RTSP/1.0
-   CSeq: x
-   Content-Type: application-sdp
-   Content-Length: nnn
-
-   <SDP_body>
-
-   ------------------------------
-   S -> C
-   RTSP/1.0 200 OK
-   CSeq: x
    ```
 
 ### Setup
@@ -105,6 +89,23 @@ For this project, we will be using the Real-Time Streaming Protocol (RTSP). We w
    CSeq: x
    Session: <session_id>
 
+   ------------------------------
+   S -> C
+   RTSP/1.0 200 OK
+   CSeq: x
+   Session: <session_id>
+   ```
+
+### Record
+ - This allows a client actually to upload the media to the server.
+ - Example of how the messages are structured:
+   ```
+   C -> S
+   RECORD rtsp://server/media RTSP/1.0
+   CSeq: x
+   Session: <session_id>
+   Range: clock=20250101T120000Z
+   
    ------------------------------
    S -> C
    RTSP/1.0 200 OK
