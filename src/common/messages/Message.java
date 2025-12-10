@@ -89,7 +89,7 @@ public class Message implements JSONSerializable {
      * @return JSONType representation of Message
      */
     @Override
-    public JSONType toJSONType() {
+    public JSONObject toJSONType() {
         JSONObject obj = new JSONObject();
         obj.put("type", type);
         obj.put("header", header);
