@@ -20,7 +20,7 @@ public class SetUpMessage extends Message {
     }
 
     /**
-     * Constructor creates a new message from parameters without session ID
+     * Constructor creates a new message from parameters without session ID.
      *
      * This is really only for client-side SETUP messages
      */
