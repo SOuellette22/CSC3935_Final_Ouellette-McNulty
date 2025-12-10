@@ -41,6 +41,12 @@ public class OptionMessage extends Message {
         return options;
     }
 
+    /**
+     * Deserializes OptionMessage from JSONObject
+     *
+     * @param jsonType JSONObject to deserialize
+     * @throws InvalidObjectException
+     */
     @Override
     public void deserialize(JSONType jsonType) throws InvalidObjectException {
         super.deserialize(jsonType);
@@ -53,6 +59,11 @@ public class OptionMessage extends Message {
 
     }
 
+    /**
+     * Serializes OptionMessage to JSONObject
+     *
+     * @return JSONObject representing the OptionMessage
+     */
     @Override
     public JSONObject toJSONType() {
         JSONObject obj = super.toJSONType();
