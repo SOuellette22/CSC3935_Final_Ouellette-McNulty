@@ -69,4 +69,12 @@ public class PlayPauseMessage extends Message {
     public String getRange() {
         return range;
     }
+
+    /**
+     * Override toString to include session ID and range
+     */
+    @Override
+    public String toString() {
+        return super.toString();
+    }
 }
