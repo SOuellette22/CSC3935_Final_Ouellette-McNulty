@@ -22,8 +22,15 @@ public class SetUpMessage extends Message {
         this.transport = transport;
     }
 
+    /**
+     * Constructor creates a new SETUP message from a message string
+     */
     public SetUpMessage(String messageString) {
         super(messageString);
+
+        if (this.getType() != "SETUP") {
+            throw new IllegalArgumentException("Invalid message type for SetUpMessage: " + this.getType());
+        }
 
         String[] lines = messageString.split("\r\n");
 

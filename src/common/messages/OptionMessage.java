@@ -18,6 +18,10 @@ public class OptionMessage extends Message {
     public OptionMessage(String messageString) {
         super(messageString);
 
+        if (this.getType() != "OPTIONS") {
+            throw new IllegalArgumentException("Invalid message type for OptionMessage: " + this.getType());
+        }
+
         String[] lines = messageString.split("\r\n");
 
         // Third line: Options: <options>
