@@ -8,8 +8,8 @@ public class SetUpMessage extends Message {
     /**
      * Constructor creates a new SETUP message from parameters for the server
      */
-    public SetUpMessage(String type, String header, int cseq, int sessionID, String transport) {
-        super(type, header, cseq);
+    public SetUpMessage(String header, int cseq, int sessionID, String transport) {
+        super("SETUP", header, cseq);
         this.sessionID = sessionID;
         this.transport = transport;
     }
@@ -17,8 +17,8 @@ public class SetUpMessage extends Message {
     /**
      * Constructor creates a new SETUP message from a message string for the client
      */
-    public SetUpMessage(String type, String header, int cseq, String transport) {
-        super(type, header, cseq);
+    public SetUpMessage( String header, int cseq, String transport) {
+        super("SETUP", header, cseq);
         this.transport = transport;
     }
 
@@ -28,7 +28,7 @@ public class SetUpMessage extends Message {
     public SetUpMessage(String messageString) {
         super(messageString);
 
-        if (this.getType() != "SETUP") {
+        if (!(this.getType().equals("SETUP"))) {
             throw new IllegalArgumentException("Invalid message type for SetUpMessage: " + this.getType());
         }
 
@@ -75,6 +75,20 @@ public class SetUpMessage extends Message {
      */
     @Override
     public String toString() {
-        return super.toString();
+        // If messageString is already constructed, return it
+        if (messageString != null) {
+            return messageString;
+        }
+
+        // Otherwise, construct it
+        StringBuilder sb = new StringBuilder();
+        sb.append(super.toString());
+        if (sessionID != 0) {
+            sb.append("Session: ").append(sessionID).append("\r\n");
+        }
+        sb.append("Transport: ").append(transport).append("\r\n");
+
+        return sb.toString() + "\r\n";
+
     }
 }

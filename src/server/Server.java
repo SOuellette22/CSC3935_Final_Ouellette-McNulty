@@ -1,5 +1,6 @@
 package server;
 
+import com.sun.jdi.event.ThreadDeathEvent;
 import common.MessageSocket;
 import common.messages.Message;
 import merrimackutil.cli.LongOption;
@@ -120,15 +121,20 @@ class Server {
     private static void serverStart() {
 
         try {
+
             ServerSocket serverSocket = new ServerSocket(port);
 
             while(true) {
 
                 MessageSocket messageSocket = new MessageSocket(serverSocket.accept());
 
-                Message msg = messageSocket.getMessage();
-
-                System.out.println(msg);
+                while (true) {
+                    if (messageSocket.hasMessage()){
+                        Message msg = messageSocket.getMessage();
+                        System.out.println("Received message: \n" + msg);
+                        break;
+                    }
+                }
 
             }
 

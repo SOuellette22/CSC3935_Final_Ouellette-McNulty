@@ -15,10 +15,6 @@ public class Message {
         this.type = type;
         this.header = header;
         this.cseq = cseq;
-
-        // Construct the message string
-        messageString = type + " " + header + " RTSP/1.0\r\n" +
-                        "CSeq: " + cseq + "\r\n";
     }
 
     /**
@@ -68,6 +64,7 @@ public class Message {
 
     @Override
     public String toString() {
-        return messageString;
+        return type + " " + header + " RTSP/1.0\r\n" +
+                "CSeq: " + cseq + "\r\n";
     }
 }

@@ -2,6 +2,8 @@ package common;
 
 import common.messages.Message;
 import common.messages.OptionMessage;
+import common.messages.PlayPauseMessage;
+import common.messages.SetUpMessage;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -68,10 +70,22 @@ public class MessageSocket extends Socket {
      */
     public Message getMessage() throws RuntimeException {
 
+        if (!recv.hasNext()) {
+            return null; // No message to read
+        }
+
         StringBuilder message = new StringBuilder();
 
         while (recv.hasNext()) {
-            message.append(recv.nextLine());
+            String line = recv.nextLine();
+
+            if (line.isEmpty()) {
+                recv.nextLine();
+                break; // End of message
+            }
+
+            message.append(line);
+
             if (recv.hasNext()) {
                 message.append("\r\n");
             }
@@ -80,12 +94,26 @@ public class MessageSocket extends Socket {
         Message msg = new Message(message.toString());
 
         switch (msg.getType()) {
-            case "OPTIONS":
+            case "OPTION": // Note: OPTIONS in spec is plural
                 return new OptionMessage(message.toString());
+            case "SETUP":
+                return new SetUpMessage(message.toString());
+            case "PLAY":
+            case "PAUSE":
+                return new PlayPauseMessage(message.toString());
             default:
                 throw new RuntimeException("Unknown message type: " + msg.getType());
         }
 
+    }
+
+    /**
+     * Check if there is a message available to read
+     *
+     * @return true if a message is available, false otherwise
+     */
+    public boolean hasMessage() {
+        return recv.hasNext();
     }
 
 

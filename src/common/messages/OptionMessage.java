@@ -1,5 +1,7 @@
 package common.messages;
 
+import java.util.Objects;
+
 public class OptionMessage extends Message {
 
     private String options;
@@ -7,8 +9,8 @@ public class OptionMessage extends Message {
     /**
      * Constructor creates a new OPTIONS message from parameters
      */
-    public OptionMessage(String type, String header, int cseq, String options) {
-        super(type, header, cseq);
+    public OptionMessage(String header, int cseq, String options) {
+        super("OPTION", header, cseq);
         this.options = options;
     }
 
@@ -18,14 +20,14 @@ public class OptionMessage extends Message {
     public OptionMessage(String messageString) {
         super(messageString);
 
-        if (this.getType() != "OPTIONS") {
+        if (!(this.getType().equals("OPTION"))) {
             throw new IllegalArgumentException("Invalid message type for OptionMessage: " + this.getType());
         }
 
         String[] lines = messageString.split("\r\n");
 
         // Third line: Options: <options>
-        String[] optionsList = lines[2].split(" ");
+        String[] optionsList = lines[1].split(" ");
 
         // Reconstruct options string
         StringBuilder optionsBuilder = new StringBuilder();
@@ -62,6 +64,10 @@ public class OptionMessage extends Message {
      */
     @Override
     public String toString() {
-        return super.toString();
+        if (options != null && !options.isEmpty()) {
+            return super.toString() + "Options: " + options + "\r\n" + "\r\n";
+        } else {
+            return super.toString() + "\r\n";
+        }
     }
 }

@@ -29,7 +29,7 @@ public class PlayPauseMessage extends Message {
     public PlayPauseMessage(String messageString) {
         super(messageString);
 
-        if (this.getType() != "PLAY" && this.getType() != "PAUSE") {
+        if (!(this.getType().equals("PLAY") || this.getType().equals("PAUSE"))) {
             throw new IllegalArgumentException("Invalid message type for PlayPauseMessage: " + this.getType());
         }
 
@@ -75,6 +75,14 @@ public class PlayPauseMessage extends Message {
      */
     @Override
     public String toString() {
-        return super.toString();
+        if (messageString != null) {
+            return messageString;
+        } else {
+            String baseString = super.toString() + "Session: " + sessionID + "\r\n";
+            if (range != null && !range.isEmpty()) {
+                baseString += "Range: " + range + "\r\n";
+            }
+            return baseString + "\r\n";
+        }
     }
 }
