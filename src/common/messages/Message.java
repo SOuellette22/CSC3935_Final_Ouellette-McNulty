@@ -1,12 +1,8 @@
 package common.messages;
 
-import merrimackutil.json.JSONSerializable;
-import merrimackutil.json.types.JSONObject;
-import merrimackutil.json.types.JSONType;
+public class Message {
 
-import java.io.InvalidObjectException;
-
-public class Message implements JSONSerializable {
+    protected String messageString;
 
     private String type;
     private String header;
@@ -15,23 +11,32 @@ public class Message implements JSONSerializable {
     /**
      * Constructor creates a new message from parameters
      */
-    public Message (String type, String header, int cseq) {
+    public Message(String type, String header, int cseq) {
         this.type = type;
         this.header = header;
         this.cseq = cseq;
+
+        // Construct the message string
+        messageString = type + " " + header + " RTSP/1.0\r\n" +
+                        "CSeq: " + cseq + "\r\n";
     }
 
     /**
-     * Constructor creates a new message object from JSONobject by deserializing it
-     *
-     * @param JSONMessage JSONObject representing the message
+     * Constructor creates a new message from a message string
      */
-    public Message(JSONObject JSONMessage) {
-        try {
-            deserialize(JSONMessage);
-        } catch (InvalidObjectException e) {
-            throw new IllegalArgumentException(e);
-        }
+    public Message(String messageString) {
+        this.messageString = messageString;
+
+        // Parse the message string to extract type, header, and cseq
+        String[] lines = messageString.split("\r\n");
+
+        // First line: TYPE SERVER_ADDRESS RTSP/1.0
+        String[] firstLineParts = lines[0].split(" ");
+        this.type = firstLineParts[0];
+        this.header = firstLineParts[1];
+
+        // Second line: CSeq: <number>
+        this.cseq = Integer.parseInt(lines[1].split(" ")[1]);
     }
 
     /**
@@ -61,39 +66,8 @@ public class Message implements JSONSerializable {
         return cseq;
     }
 
-    /**
-     * Deserialize JSONType into Message object
-     *
-     * @param jsonType JSONType to deserialize
-     * @throws InvalidObjectException if jsonType is not a valid Message representation
-     */
     @Override
-    public void deserialize(JSONType jsonType) throws InvalidObjectException {
-
-        if (!(jsonType instanceof JSONObject)) {
-            throw new InvalidObjectException("Expected JSONObject for Message deserialization");
-        }
-
-        JSONObject obj = (JSONObject) jsonType;
-
-        obj.checkValidity(new String[]{"type", "header", "cseq"});
-
-        this.type = obj.getString("type");
-        this.header = obj.getString("header");
-        this.cseq = obj.getInt("cseq");
-    }
-
-    /**
-     * Serialize Message object into JSONType
-     *
-     * @return JSONType representation of Message
-     */
-    @Override
-    public JSONObject toJSONType() {
-        JSONObject obj = new JSONObject();
-        obj.put("type", type);
-        obj.put("header", header);
-        obj.put("cseq", cseq);
-        return obj;
+    public String toString() {
+        return messageString;
     }
 }

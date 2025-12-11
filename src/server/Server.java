@@ -1,5 +1,7 @@
 package server;
 
+import common.MessageSocket;
+import common.messages.Message;
 import merrimackutil.cli.LongOption;
 import merrimackutil.cli.OptionParser;
 import merrimackutil.json.InvalidJSONException;
@@ -11,7 +13,9 @@ import merrimackutil.net.Log;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InvalidObjectException;
+import java.net.ServerSocket;
 
 class Server {
 
@@ -109,6 +113,28 @@ class Server {
         serverLog.log("Using database directory: " + databaseDir);
         serverLog.log("Max connections set to: " + maxConnections);
 
+        serverStart();
+
+    }
+
+    private static void serverStart() {
+
+        try {
+            ServerSocket serverSocket = new ServerSocket(port);
+
+            while(true) {
+
+                MessageSocket messageSocket = new MessageSocket(serverSocket.accept());
+
+                Message msg = messageSocket.getMessage();
+
+                System.out.println(msg);
+
+            }
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**

@@ -1,12 +1,9 @@
 package common;
 
 import common.messages.Message;
-import merrimackutil.json.InvalidJSONException;
-import merrimackutil.json.JsonIO;
-import merrimackutil.json.types.JSONObject;
+import common.messages.OptionMessage;
 
 import java.io.IOException;
-import java.io.InvalidObjectException;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Scanner;
@@ -60,29 +57,33 @@ public class MessageSocket extends Socket {
      * This sends a message to the connected socket
      */
     public void sendMessage(Message msg) {
-        JsonIO.writeSerializedObject(msg, send);
+        send.println(msg);
     }
 
     /**
      * Receives a message from the connected socket.
      *
      * @return The received {@link Message} object.
-     * @throws InvalidJSONException If the received data cannot be parsed as a valid JSON object.
-     * @throws InvalidObjectException
+     * @throws RuntimeException if the message type is unknown.
      */
-    public Message getMessage() throws InvalidJSONException, InvalidObjectException {
+    public Message getMessage() throws RuntimeException {
 
-        String serializedMsg = recv.nextLine();
+        StringBuilder message = new StringBuilder();
 
-        JSONObject obj = JsonIO.readObject(serializedMsg);
+        while (recv.hasNext()) {
+            message.append(recv.nextLine());
+            if (recv.hasNext()) {
+                message.append("\r\n");
+            }
+        }
 
-        Message msg = new Message(obj);
+        Message msg = new Message(message.toString());
 
         switch (msg.getType()) {
-            // TODO: add other message types here as they are implemented
-            default -> {
-                throw new IllegalArgumentException("Unknown message type: " + msg.getType());
-            }
+            case "OPTIONS":
+                return new OptionMessage(message.toString());
+            default:
+                throw new RuntimeException("Unknown message type: " + msg.getType());
         }
 
     }

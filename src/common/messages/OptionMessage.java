@@ -1,75 +1,63 @@
 package common.messages;
 
-import merrimackutil.json.types.JSONObject;
-import merrimackutil.json.types.JSONType;
-
-import java.io.InvalidObjectException;
-
 public class OptionMessage extends Message {
 
     private String options;
 
     /**
-     * Constructor creates a new message from parameters
+     * Constructor creates a new OPTIONS message from parameters
      */
-    public OptionMessage(String type, String header, int cseq, String optoins) {
+    public OptionMessage(String type, String header, int cseq, String options) {
         super(type, header, cseq);
-        this.options = optoins;
+        this.options = options;
     }
 
     /**
-     * Constructor creates a new message object from JSONobject by deserializing it
-     *
-     * @param JSONMessage JSONObject representing the message
+     * Constructor creates a new OPTIONS message from a message string
      */
-    public OptionMessage(JSONObject JSONMessage) {
-        super(JSONMessage);
+    public OptionMessage(String messageString) {
+        super(messageString);
 
-        // Validate message type
-        if (!this.getType().equals("OPTION")) {
-            throw new IllegalArgumentException("Invalid message type for OptionMessage: " + this.getType());
+        String[] lines = messageString.split("\r\n");
+
+        // Third line: Options: <options>
+        String[] optionsList = lines[2].split(" ");
+
+        // Reconstruct options string
+        StringBuilder optionsBuilder = new StringBuilder();
+        for (int i = 1; i < optionsList.length; i++) {
+            optionsBuilder.append(optionsList[i]);
+            if (i < optionsList.length - 1) {
+                optionsBuilder.append(" ");
+            }
         }
 
+        this.options = optionsBuilder.toString();
     }
 
     /**
-     * Get message options
+     * Get options
      *
-     * @return String of message options
+     * @return String of options
      */
     public String getOptions() {
         return options;
     }
 
     /**
-     * Deserializes OptionMessage from JSONObject
+     * Set options
      *
-     * @param jsonType JSONObject to deserialize
-     * @throws InvalidObjectException
+     * @param options String of options
      */
-    @Override
-    public void deserialize(JSONType jsonType) throws InvalidObjectException {
-        super.deserialize(jsonType);
-
-        JSONObject obj = (JSONObject) jsonType;
-
-        if (obj.containsKey("options")) {
-            this.options = obj.getString("options");
-        }
-
+    public void setOptions(String options) {
+        this.options = options;
     }
 
     /**
-     * Serializes OptionMessage to JSONObject
-     *
-     * @return JSONObject representing the OptionMessage
+     * Override toString to include options
      */
     @Override
-    public JSONObject toJSONType() {
-        JSONObject obj = super.toJSONType();
-
-        obj.put("options", this.options);
-
-        return obj;
+    public String toString() {
+        return super.toString();
     }
 }

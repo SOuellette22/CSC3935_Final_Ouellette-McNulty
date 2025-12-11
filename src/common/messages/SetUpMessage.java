@@ -1,104 +1,73 @@
 package common.messages;
 
-import merrimackutil.json.types.JSONObject;
-import merrimackutil.json.types.JSONType;
-
-import java.io.InvalidObjectException;
-
 public class SetUpMessage extends Message {
 
+    private int sessionID;
     private String transport;
-    private int sessionId;
 
     /**
-     * Constructor creates a new message from parameters
+     * Constructor creates a new SETUP message from parameters for the server
      */
-    public SetUpMessage(String type, String header, int cseq, String transport, int sessionId) {
+    public SetUpMessage(String type, String header, int cseq, int sessionID, String transport) {
         super(type, header, cseq);
-        this.sessionId = sessionId;
+        this.sessionID = sessionID;
         this.transport = transport;
     }
 
     /**
-     * Constructor creates a new message from parameters without session ID.
-     *
-     * This is really only for client-side SETUP messages
+     * Constructor creates a new SETUP message from a message string for the client
      */
     public SetUpMessage(String type, String header, int cseq, String transport) {
         super(type, header, cseq);
-        this.sessionId = -1; // Indicates no session ID assigned yet
         this.transport = transport;
     }
 
-    /**
-     * Constructor creates a new message object from JSONobject by deserializing it
-     *
-     * @param JSONMessage JSONObject representing the message
-     */
-    public SetUpMessage(JSONObject JSONMessage) {
-        super(JSONMessage);
+    public SetUpMessage(String messageString) {
+        super(messageString);
 
-        if (!this.getType().equals("SETUP")) {
-            throw new IllegalArgumentException("Invalid message type for SetUpMessage: " + this.getType());
+        String[] lines = messageString.split("\r\n");
+
+        // Extract sessionID if present
+        for (String line : lines) {
+            // Look for Session if present
+            if (line.startsWith("Session: ")) {
+                this.sessionID = Integer.parseInt(line.split(" ")[1]);
+
+            // Look for Transport
+            } else if (line.startsWith("Transport: ")) {
+                this.transport = line.substring(11);
+            }
+        }
+
+        // Validate required fields
+        if (this.transport == null) {
+            throw new IllegalArgumentException("Transport field is required in SETUP message");
         }
     }
 
     /**
-     * Get message transport
+     * Get session ID
      *
-     * @return String of message transport
+     * @return int of session ID
+     */
+    public int getSessionID() {
+        return sessionID;
+    }
+
+    /**
+     * Get transport
+     *
+     * @return String of transport
      */
     public String getTransport() {
         return transport;
     }
 
     /**
-     * Get message session ID
-     *
-     * @return int of message session ID
-     */
-    public int getSessionId() {
-        return sessionId;
-    }
-
-    /**
-     * Deserializes SetUpMessage from JSONObject
-     *
-     * @param jsonType JSONObject to deserialize
-     * @throws InvalidObjectException
+     * Override toString to include sessionID and transport
      */
     @Override
-    public void deserialize(JSONType jsonType) throws InvalidObjectException {
-        super.deserialize(jsonType);
-
-        JSONObject obj = (JSONObject) jsonType;
-
-        obj.checkValidity(new String[]{"transport"});
-
-        // Session ID is only from the server
-        if (obj.containsKey("session-id")) {
-            this.sessionId = obj.getInt("session-id");
-        }
-
-        this.transport = obj.getString("transport");
-    }
-
-    /**
-     * Serializes SetUpMessage to JSONObject
-     *
-     * @return JSONObject representing the SetUpMessage
-     */
-    @Override
-    public JSONObject toJSONType() {
-        JSONObject obj = super.toJSONType();
-
-        obj.put("transport", this.transport);
-
-        // Only include session ID if it has been assigned
-        if (this.sessionId == -1) {
-            obj.put("session-id", this.sessionId);
-        }
-
-        return obj;
+    public String toString() {
+        return super.toString();
     }
 }
