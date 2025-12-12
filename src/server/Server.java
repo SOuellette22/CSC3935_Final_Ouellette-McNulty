@@ -1,5 +1,11 @@
 package server;
 
+import com.sun.jdi.event.ThreadDeathEvent;
+import common.MessageSocket;
+import common.messages.Message;
+import common.messages.OptionsMessage;
+import common.messages.PlayPauseMessage;
+import common.messages.SetUpMessage;
 import merrimackutil.cli.LongOption;
 import merrimackutil.cli.OptionParser;
 import merrimackutil.json.InvalidJSONException;
@@ -11,7 +17,9 @@ import merrimackutil.net.Log;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InvalidObjectException;
+import java.net.ServerSocket;
 
 class Server {
 
@@ -109,6 +117,35 @@ class Server {
         serverLog.log("Using database directory: " + databaseDir);
         serverLog.log("Max connections set to: " + maxConnections);
 
+        serverStart();
+
+    }
+
+    private static void serverStart() {
+
+        try {
+
+            ServerSocket serverSocket = new ServerSocket(port);
+
+            while(true) {
+
+                MessageSocket messageSocket = new MessageSocket(serverSocket.accept());
+
+                Message msg = messageSocket.getMessage();
+                System.out.println("Received message: \n" + msg);
+
+                msg = new PlayPauseMessage("PLAY", "rtsp://localhost:5000", 2, 12345, "npt=0.000-");
+                System.out.println("Sending message: \n" + msg);
+                messageSocket.sendMessage(msg);
+
+                msg = messageSocket.getMessage();
+                System.out.println("Received message: \n" + msg);
+
+            }
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**

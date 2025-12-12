@@ -1,12 +1,8 @@
 package common;
 
-import common.messages.Message;
-import merrimackutil.json.InvalidJSONException;
-import merrimackutil.json.JsonIO;
-import merrimackutil.json.types.JSONObject;
+import common.messages.*;
 
 import java.io.IOException;
-import java.io.InvalidObjectException;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Scanner;
@@ -60,31 +56,61 @@ public class MessageSocket extends Socket {
      * This sends a message to the connected socket
      */
     public void sendMessage(Message msg) {
-        JsonIO.writeSerializedObject(msg, send);
+        send.println(msg);
     }
 
     /**
      * Receives a message from the connected socket.
      *
      * @return The received {@link Message} object.
-     * @throws InvalidJSONException If the received data cannot be parsed as a valid JSON object.
-     * @throws InvalidObjectException
+     * @throws RuntimeException if the message type is unknown.
      */
-    public Message getMessage() throws InvalidJSONException, InvalidObjectException {
+    public Message getMessage() throws RuntimeException {
 
-        String serializedMsg = recv.nextLine();
+        String stringMsg =
+                recv.nextLine() + "\r\n" + // Header line
+                recv.nextLine() + "\r\n"; // CSeq line
 
-        JSONObject obj = JsonIO.readObject(serializedMsg);
-
-        Message msg = new Message(obj);
+        Message msg = new Message(stringMsg);
 
         switch (msg.getType()) {
-            // TODO: add other message types here as they are implemented
-            default -> {
-                throw new IllegalArgumentException("Unknown message type: " + msg.getType());
-            }
+            case "OPTIONS": // Note: OPTIONS in spec is plural
+
+                recv.nextLine(); // Read the empty line
+
+                return new OptionsMessage(stringMsg);
+            case "SETUP":
+
+                stringMsg += recv.nextLine() + "\r\n"; // Read the Transport line
+
+                recv.nextLine(); // Read the empty line
+
+                return new SetUpMessage(stringMsg);
+            case "PLAY":
+            case "PAUSE":
+
+                stringMsg += recv.nextLine() + "\r\n"; // Read the Session line
+
+                if (recv.hasNextLine()) {
+                    stringMsg += recv.nextLine() + "\r\n"; // Read the Range line if present
+                }
+
+                recv.nextLine(); // Read the empty line
+
+                return new PlayPauseMessage(stringMsg);
+            default:
+                throw new RuntimeException("Unknown message type: " + msg.getType());
         }
 
+    }
+
+    /**
+     * Check if there is a message available to read
+     *
+     * @return true if a message is available, false otherwise
+     */
+    public boolean hasMessage() {
+        return recv.hasNext();
     }
 
 
