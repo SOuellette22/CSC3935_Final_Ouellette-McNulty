@@ -41,7 +41,7 @@ public class PlayPauseMessage extends Message {
             if (line.startsWith("Session: ")) {
                 this.sessionID = Integer.parseInt(line.split(" ")[1]);
                 // Look for Range
-            } else if (line.startsWith("Range: ")) {
+            } else if (line.startsWith("Range: ") && getType().equals("PLAY")) {
                 this.range = line.substring(7);
             }
         }
@@ -82,7 +82,7 @@ public class PlayPauseMessage extends Message {
             if (range != null && !range.isEmpty()) {
                 baseString += "Range: " + range + "\r\n";
             }
-            return baseString + "\r\n";
+            return baseString + "\r";
         }
     }
 }

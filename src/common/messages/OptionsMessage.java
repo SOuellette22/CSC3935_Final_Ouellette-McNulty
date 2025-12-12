@@ -69,9 +69,9 @@ public class OptionsMessage extends Message {
     @Override
     public String toString() {
         if (options != null && !options.isEmpty()) {
-            return super.toString() + "Public: " + options + "\r\n" + "\r\n";
+            return super.toString() + "Public: " + options + "\r\n" + "\r";
         } else {
-            return super.toString() + "\r\n";
+            return super.toString() + "\r";
         }
     }
 }

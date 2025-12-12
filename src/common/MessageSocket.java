@@ -1,9 +1,6 @@
 package common;
 
-import common.messages.Message;
-import common.messages.OptionsMessage;
-import common.messages.PlayPauseMessage;
-import common.messages.SetUpMessage;
+import common.messages.*;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -70,37 +67,37 @@ public class MessageSocket extends Socket {
      */
     public Message getMessage() throws RuntimeException {
 
-        if (!recv.hasNext()) {
-            return null; // No message to read
-        }
+        String stringMsg =
+                recv.nextLine() + "\r\n" + // Header line
+                recv.nextLine() + "\r\n"; // CSeq line
 
-        StringBuilder message = new StringBuilder();
-
-        while (recv.hasNext()) {
-            String line = recv.nextLine();
-
-            if (line.isEmpty()) {
-                recv.nextLine();
-                break; // End of message
-            }
-
-            message.append(line);
-
-            if (recv.hasNext()) {
-                message.append("\r\n");
-            }
-        }
-
-        Message msg = new Message(message.toString());
+        Message msg = new Message(stringMsg);
 
         switch (msg.getType()) {
             case "OPTIONS": // Note: OPTIONS in spec is plural
-                return new OptionsMessage(message.toString());
+
+                recv.nextLine(); // Read the empty line
+
+                return new OptionsMessage(stringMsg);
             case "SETUP":
-                return new SetUpMessage(message.toString());
+
+                stringMsg += recv.nextLine() + "\r\n"; // Read the Transport line
+
+                recv.nextLine(); // Read the empty line
+
+                return new SetUpMessage(stringMsg);
             case "PLAY":
             case "PAUSE":
-                return new PlayPauseMessage(message.toString());
+
+                stringMsg += recv.nextLine() + "\r\n"; // Read the Session line
+
+                if (recv.hasNextLine()) {
+                    stringMsg += recv.nextLine() + "\r\n"; // Read the Range line if present
+                }
+
+                recv.nextLine(); // Read the empty line
+
+                return new PlayPauseMessage(stringMsg);
             default:
                 throw new RuntimeException("Unknown message type: " + msg.getType());
         }
