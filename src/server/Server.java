@@ -2,10 +2,7 @@ package server;
 
 import com.sun.jdi.event.ThreadDeathEvent;
 import common.MessageSocket;
-import common.messages.Message;
-import common.messages.OptionsMessage;
-import common.messages.PlayPauseMessage;
-import common.messages.SetUpMessage;
+import common.messages.*;
 import merrimackutil.cli.LongOption;
 import merrimackutil.cli.OptionParser;
 import merrimackutil.json.InvalidJSONException;
@@ -134,12 +131,33 @@ class Server {
                 Message msg = messageSocket.getMessage();
                 System.out.println("Received message: \n" + msg);
 
-                msg = new PlayPauseMessage("PLAY", "rtsp://localhost:5000", 2, 12345, "npt=0.000-");
-                System.out.println("Sending message: \n" + msg);
-                messageSocket.sendMessage(msg);
-
-                msg = messageSocket.getMessage();
-                System.out.println("Received message: \n" + msg);
+                switch (msg.getType()) {
+                    case "OPTIONS" -> {
+                        msg = new ServerResponse.ResponseBuilder(200, msg.getCseq())
+                                .setOptions("DESCRIBE, SETUP, PLAY, PAUSE, RECORD, TEARDOWN")
+                                .build();
+                        messageSocket.sendMessage(msg);
+                        System.out.println("Sent message: \n" + msg);
+                    }
+                    case "SETUP" -> {
+                        msg = new ServerResponse.ResponseBuilder(200, msg.getCseq())
+                                .setSessionId(123456)
+                                .setTransport(((SetUpMessage) msg).getTransport() + ";server_port=9000-9001")
+                                .build();
+                        messageSocket.sendMessage(msg);
+                        System.out.println("Sent message: \n" + msg);
+                    }
+                    case "PLAY", "PAUSE" -> {
+                        msg = new ServerResponse.ResponseBuilder(200, msg.getCseq())
+                                .setSessionId(123456)
+                                .build();
+                        messageSocket.sendMessage(msg);
+                        System.out.println("Sent message: \n" + msg);
+                    }
+                    default -> {
+                        System.err.println("Unknown message type received: " + msg.getType());
+                    }
+                }
 
             }
 

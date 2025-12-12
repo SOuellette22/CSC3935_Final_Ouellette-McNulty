@@ -6,6 +6,8 @@ import common.messages.OptionsMessage;
 import common.messages.PlayPauseMessage;
 import common.messages.SetUpMessage;
 
+import java.io.IOException;
+
 class Client {
 
     public static void main(String[] args) {
@@ -14,17 +16,17 @@ class Client {
         try {
             MessageSocket messageSocket = new MessageSocket("localhost", 5000);
 
-            Message msg = new PlayPauseMessage("PAUSE", "rtsp://localhost:5000", 2, 12345, "npt=0.000-");
-            System.out.println("Sending message: \n" + msg);
+            Message msg = new OptionsMessage("localhost", 1);
             messageSocket.sendMessage(msg);
+            System.out.println("Sent message: \n" + msg);
 
             msg = messageSocket.getMessage();
             System.out.println("Received message: \n" + msg);
 
             messageSocket.sendMessage(msg);
 
-        } catch (Exception e) {
-            System.err.println("Error establishing message socket: " + e.getMessage());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 }
