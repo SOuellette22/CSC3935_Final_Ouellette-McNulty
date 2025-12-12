@@ -1,7 +1,7 @@
 package client;
 
 import common.MessageSocket;
-import common.messages.OptionMessage;
+import common.messages.OptionsMessage;
 
 class Client {
 
@@ -9,9 +9,9 @@ class Client {
         System.out.println("Client started.");
 
         try {
-            MessageSocket messageSocket = new MessageSocket("127.0.0.1", 5000);
+            MessageSocket messageSocket = new MessageSocket("localhost", 5000);
 
-            OptionMessage msg = new OptionMessage("client1", 1, "DESCRIBE SETUP PLAY PAUSE TEARDOWN");
+            OptionsMessage msg = new OptionsMessage("rtsp://localhost:5000", 1);
             System.out.println(msg);
             messageSocket.sendMessage(msg);
 

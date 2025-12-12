@@ -1,7 +1,7 @@
 package common;
 
 import common.messages.Message;
-import common.messages.OptionMessage;
+import common.messages.OptionsMessage;
 import common.messages.PlayPauseMessage;
 import common.messages.SetUpMessage;
 
@@ -94,8 +94,8 @@ public class MessageSocket extends Socket {
         Message msg = new Message(message.toString());
 
         switch (msg.getType()) {
-            case "OPTION": // Note: OPTIONS in spec is plural
-                return new OptionMessage(message.toString());
+            case "OPTIONS": // Note: OPTIONS in spec is plural
+                return new OptionsMessage(message.toString());
             case "SETUP":
                 return new SetUpMessage(message.toString());
             case "PLAY":

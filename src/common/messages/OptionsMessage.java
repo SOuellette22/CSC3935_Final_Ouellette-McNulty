@@ -1,44 +1,48 @@
 package common.messages;
 
-import java.util.Objects;
-
-public class OptionMessage extends Message {
+public class OptionsMessage extends Message {
 
     private String options;
 
     /**
      * Constructor creates a new OPTIONS message from parameters
      */
-    public OptionMessage(String header, int cseq, String options) {
-        super("OPTION", header, cseq);
+    public OptionsMessage(String header, int cseq, String options) {
+        super("OPTIONS", header, cseq);
         this.options = options;
+    }
+
+    public OptionsMessage(String header, int cseq) {
+        super("OPTIONS", header, cseq);
     }
 
     /**
      * Constructor creates a new OPTIONS message from a message string
      */
-    public OptionMessage(String messageString) {
+    public OptionsMessage(String messageString) {
         super(messageString);
 
-        if (!(this.getType().equals("OPTION"))) {
+        if (!(this.getType().equals("OPTIONS"))) {
             throw new IllegalArgumentException("Invalid message type for OptionMessage: " + this.getType());
         }
 
         String[] lines = messageString.split("\r\n");
 
         // Third line: Options: <options>
-        String[] optionsList = lines[1].split(" ");
+        if (lines.length == 3) {
+            String[] optionsList = lines[2].split(" ");
 
-        // Reconstruct options string
-        StringBuilder optionsBuilder = new StringBuilder();
-        for (int i = 1; i < optionsList.length; i++) {
-            optionsBuilder.append(optionsList[i]);
-            if (i < optionsList.length - 1) {
-                optionsBuilder.append(" ");
+            // Reconstruct options string
+            StringBuilder optionsBuilder = new StringBuilder();
+            for (int i = 1; i < optionsList.length; i++) {
+                optionsBuilder.append(optionsList[i]);
+                if (i < optionsList.length - 1) {
+                    optionsBuilder.append(" ");
+                }
             }
-        }
 
-        this.options = optionsBuilder.toString();
+            this.options = optionsBuilder.toString();
+        }
     }
 
     /**
@@ -65,7 +69,7 @@ public class OptionMessage extends Message {
     @Override
     public String toString() {
         if (options != null && !options.isEmpty()) {
-            return super.toString() + "Options: " + options + "\r\n" + "\r\n";
+            return super.toString() + "Public: " + options + "\r\n" + "\r\n";
         } else {
             return super.toString() + "\r\n";
         }
