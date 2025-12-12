@@ -3,6 +3,7 @@ package server;
 import com.sun.jdi.event.ThreadDeathEvent;
 import common.MessageSocket;
 import common.messages.Message;
+import common.messages.OptionsMessage;
 import merrimackutil.cli.LongOption;
 import merrimackutil.cli.OptionParser;
 import merrimackutil.json.InvalidJSONException;
@@ -128,13 +129,11 @@ class Server {
 
                 MessageSocket messageSocket = new MessageSocket(serverSocket.accept());
 
-                while (true) {
-                    if (messageSocket.hasMessage()){
-                        Message msg = messageSocket.getMessage();
-                        System.out.println("Received message: \n" + msg);
-                        break;
-                    }
-                }
+                Message msg = messageSocket.getMessage();
+                System.out.println("Received message: \n" + msg);
+
+                msg = new OptionsMessage("rtsp://localhost:" + port, 1, "OPTIONS, DESCRIBE, SETUP, TEARDOWN, PLAY, PAUSE");
+                messageSocket.sendMessage(msg);
 
             }
 
