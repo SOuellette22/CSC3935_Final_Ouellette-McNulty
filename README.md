@@ -8,7 +8,20 @@ For this project, we will be using the Real-Time Streaming Protocol (RTSP). We w
 
 ## Installation
 
-**This will come later**
+- To setup the project run the following:
+```bash
+ant dist
+```
+
+- Run the server first is as follows:
+```bash
+java -jar dist/server.jar
+```
+
+- Run the client next as follows:
+```bash
+java -jar dist/client.jar
+```
 
 ## Methods Included
 
