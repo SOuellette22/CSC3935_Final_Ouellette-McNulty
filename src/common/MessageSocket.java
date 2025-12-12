@@ -67,6 +67,8 @@ public class MessageSocket extends Socket {
      */
     public Message getMessage() throws RuntimeException {
 
+        String temp;
+
         String stringMsg =
                 recv.nextLine() + "\r\n" + // Header line
                 recv.nextLine() + "\r\n"; // CSeq line
@@ -91,13 +93,51 @@ public class MessageSocket extends Socket {
 
                 stringMsg += recv.nextLine() + "\r\n"; // Read the Session line
 
-                if (recv.hasNextLine()) {
-                    stringMsg += recv.nextLine() + "\r\n"; // Read the Range line if present
+                temp = recv.nextLine(); // Read the next line
+
+                if (temp.startsWith("Range:")) { // Check for Range line
+                    stringMsg += temp + "\r\n"; // Read the Range line if present
+
+                    recv.nextLine(); // Read the empty line
                 }
 
-                recv.nextLine(); // Read the empty line
-
                 return new PlayPauseMessage(stringMsg);
+            case "RTSP/1.0":
+
+                temp = recv.nextLine();
+
+                if (temp.startsWith("Session:")) { // Check for Session line
+                    stringMsg += temp + "\r\n"; // Session line
+
+                    if (recv.hasNextLine()) { // Check for Transport line
+                        temp = recv.nextLine();
+                        if (temp.startsWith("Transport:")) {
+                            stringMsg += temp + "\r\n"; // Transport line
+                        }
+                    }
+
+                    recv.nextLine(); // Read the empty line
+
+                } else if (temp.startsWith("Public:")) { // Check for Public line
+                    stringMsg += temp + "\r\n"; // Public line
+                    recv.nextLine(); // Read the empty line
+
+                } else if (temp.startsWith("Content-Type:")) { // Check for Content-Type line
+                    stringMsg += temp + "\r\n"; // Content-Type line
+                    int contentLength = Integer.parseInt(recv.nextLine().substring(16));
+                    stringMsg += "Content-Length: " + contentLength + "\r\n";
+                    stringMsg += "\r\n"; // Blank line
+                    // Read content based on Content-Length
+                    StringBuilder body = new StringBuilder();
+                    for (int i = 0; i < contentLength; i++) {
+                        body.append(recv.nextLine()).append("\n");
+                    }
+                    stringMsg += body + "\r\n";
+
+                    recv.nextLine(); // Read the empty line
+                }
+
+                return new ServerResponse(stringMsg);
             default:
                 throw new RuntimeException("Unknown message type: " + msg.getType());
         }
