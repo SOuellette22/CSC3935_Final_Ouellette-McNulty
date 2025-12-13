@@ -1,22 +1,19 @@
 package server;
 
 import common.MessageSocket;
-import common.messages.Message;
-import common.messages.OptionsMessage;
-import common.messages.ServerResponse;
-import common.messages.SetUpMessage;
+import common.messages.*;
 import merrimackutil.net.Log;
 
 import java.util.Random;
 
 public class ConnectionHandler extends Thread {
 
-    private MessageSocket socket;
-    private Log logger;
+    private final MessageSocket socket;
+    private final Log logger;
     private RTSPSates state;
 
     private int sessionId;
-    private Random r;
+    private final Random r;
 
     public ConnectionHandler(MessageSocket socket, Log logger) {
         this.socket = socket;
@@ -84,6 +81,15 @@ public class ConnectionHandler extends Thread {
                         break;
                     }
 
+                    int sessionIdMsg = ((PlayPauseMessage) msg).getSessionID();
+                    if (sessionIdMsg != sessionId) {
+                        msg = new ServerResponse.ResponseBuilder(454, msg.getCseq())
+                                .build();
+                        socket.sendMessage(msg);
+                        logger.log("ERROR: Session ID mismatch.");
+                        break;
+                    }
+
                     msg = new ServerResponse.ResponseBuilder(200, msg.getCseq())
                             .setSessionId(sessionId)
                             .build();
@@ -105,11 +111,23 @@ public class ConnectionHandler extends Thread {
                         break;
                     }
 
+                    int sessionIdMsg = ((PlayPauseMessage) msg).getSessionID();
+                    if (sessionIdMsg != sessionId) {
+                        msg = new ServerResponse.ResponseBuilder(454, msg.getCseq())
+                                .build();
+                        socket.sendMessage(msg);
+                        logger.log("ERROR: Session ID mismatch.");
+                        break;
+                    }
+
                     msg = new ServerResponse.ResponseBuilder(200, msg.getCseq())
                             .setSessionId(sessionId)
                             .build();
                     state = RTSPSates.READY;
                     socket.sendMessage(msg);
+
+                    // TODO: Pause streaming media data to client
+
                     logger.log("INFO: Sent PAUSE response.");
                 }
                 default -> {
