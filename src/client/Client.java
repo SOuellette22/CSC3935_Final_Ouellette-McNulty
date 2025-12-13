@@ -14,6 +14,7 @@ public class Client {
     private static boolean doPlay = false;
     private static boolean doPause = false;
     private static boolean doRecord = false;
+    private static boolean doTeardown = false;
     private static boolean doHelp = false;
 
     private static String address = null; // server address
@@ -29,11 +30,13 @@ public class Client {
         System.out.println("  client --play <server>[:port]");
         System.out.println("  client --pause <server>[:port]");
         System.out.println("  client --record <server>[:port]");
+        System.out.println("  client --teardown <server>[:port]");
         System.out.println("  client --help");
         System.out.println("Options: ");
         System.out.printf("  %-15s %-20s\n", "-p, --play", "Play an audio file from the server");
         System.out.printf("  %-15s %-20s\n", "-u, --pause", "Pause the current audio stream");
         System.out.printf("  %-15s %-20s\n", "-r, --record", "Record an audio file on the server");
+        System.out.printf("  %-15s %-20s\n", "-t, --teardown", "End the current session and release resources");
         System.out.printf("  %-15s %-20s\n", "-h, --help", "Display this help message");
     }
 
@@ -47,11 +50,12 @@ public class Client {
         opts[0] = new LongOption("play", true, 'p');
         opts[1] = new LongOption("pause", true, 'u');
         opts[2] = new LongOption("record", true, 'r');
-        opts[3] = new LongOption("help", false, 'h');
+        opts[3] = new LongOption("teardown", true, 't');
+        opts[4] = new LongOption("help", false, 'h');
 
         parser = new OptionParser(args);
         parser.setLongOpts(opts);
-        parser.setOptString("p:u:r:h");
+        parser.setOptString("p:u:r:t:h");
 
         Tuple<Character, String> currOpt;
 
@@ -70,6 +74,10 @@ public class Client {
                     doRecord = true;
                     parseServer(currOpt.getSecond());
                     break;
+                case 't':
+                    doTeardown = true;
+                    parseServer(currOpt.getSecond());
+                    break;
                 case 'h':
                     doHelp = true;
                     break;
@@ -85,7 +93,7 @@ public class Client {
             System.exit(0);
         }
 
-        if ((doPlay || doPause || doRecord) && address == null) {
+        if ((doPlay || doPause || doRecord || doTeardown) && address == null) {
             System.out.println("Missing server address.");
             usage();
         }
@@ -117,6 +125,8 @@ public class Client {
                 pause();
             } else if (doRecord) {
                 record();
+            } else if (doTeardown) {
+                teardown();
             }
         } catch (IOException e) {
             System.err.println("IO Error: " + e.getMessage());
@@ -174,6 +184,20 @@ public class Client {
             Message record = new RecordMessage(address, cseq++, sessionID, "npt=0-30");
             ms.sendMessage(record);
             System.out.println("Sent:\n" + record);
+            Message resp = ms.getMessage();
+            System.out.println("Received:\n" + resp);
+        }
+    }
+
+    private static void teardown() throws IOException {
+        try (Socket socket = new Socket(address, serverPort);
+            MessageSocket ms = new MessageSocket(socket)) {
+
+            // TEARDOWN
+            Message teardown = new TeardownMessage(address, cseq++, sessionID);
+            ms.sendMessage(teardown);
+            System.out.println("Sent:\n" + teardown);
+
             Message resp = ms.getMessage();
             System.out.println("Received:\n" + resp);
         }
