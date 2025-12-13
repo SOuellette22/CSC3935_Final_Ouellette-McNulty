@@ -17,6 +17,12 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InvalidObjectException;
 import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.HashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 class Server {
 
@@ -26,6 +32,8 @@ class Server {
     public static String databaseDir;
     public static int maxConnections;
     public static String log;
+
+    public static Log serverLog;
 
     /**
      * Prints the usage message for the server application
@@ -102,8 +110,6 @@ class Server {
 
         processArgs(args);
 
-        Log serverLog;
-
         try {
             serverLog = new Log(log, "ServerLog");
         } catch (FileNotFoundException e) {
@@ -123,41 +129,13 @@ class Server {
         try {
 
             ServerSocket serverSocket = new ServerSocket(port);
+            ExecutorService pool = Executors.newFixedThreadPool(maxConnections);
 
             while(true) {
 
                 MessageSocket messageSocket = new MessageSocket(serverSocket.accept());
 
-                Message msg = messageSocket.getMessage();
-                System.out.println("Received message: \n" + msg);
-
-                switch (msg.getType()) {
-                    case "OPTIONS" -> {
-                        msg = new ServerResponse.ResponseBuilder(200, msg.getCseq())
-                                .setOptions("DESCRIBE, SETUP, PLAY, PAUSE, RECORD, TEARDOWN")
-                                .build();
-                        messageSocket.sendMessage(msg);
-                        System.out.println("Sent message: \n" + msg);
-                    }
-                    case "SETUP" -> {
-                        msg = new ServerResponse.ResponseBuilder(200, msg.getCseq())
-                                .setSessionId(123456)
-                                .setTransport(((SetUpMessage) msg).getTransport() + ";server_port=9000-9001")
-                                .build();
-                        messageSocket.sendMessage(msg);
-                        System.out.println("Sent message: \n" + msg);
-                    }
-                    case "PLAY", "PAUSE" -> {
-                        msg = new ServerResponse.ResponseBuilder(200, msg.getCseq())
-                                .setSessionId(123456)
-                                .build();
-                        messageSocket.sendMessage(msg);
-                        System.out.println("Sent message: \n" + msg);
-                    }
-                    default -> {
-                        System.err.println("Unknown message type received: " + msg.getType());
-                    }
-                }
+                pool.execute(new ConnectionHandler(messageSocket, serverLog));
 
             }
 

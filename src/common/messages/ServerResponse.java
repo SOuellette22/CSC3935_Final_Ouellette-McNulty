@@ -57,7 +57,7 @@ public class ServerResponse extends Message {
         // Additional parsing for optional fields can be implemented here
         for (String line : lines) {
             if (line.startsWith("Public: ")) { // Options header
-                this.options = line.substring(9);
+                this.options = line.substring(8);
 
             } else if (line.startsWith("Session: ")) { // Session header
                 this.sessionId = Integer.parseInt(line.substring(9));
@@ -183,9 +183,9 @@ public class ServerResponse extends Message {
         if (contentLength != 0) {
             sb.append("Content-Length: ").append(contentLength).append("\r\n");
         }
-        sb.append("\r\n");
+        sb.append("\r");
         if (body != null) {
-            sb.append(body).append("\r\n");
+            sb.append(body).append("\r");
         }
 
         return sb.toString();
