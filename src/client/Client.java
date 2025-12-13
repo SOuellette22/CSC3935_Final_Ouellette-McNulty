@@ -101,6 +101,7 @@ public class Client {
         }
     }
 
+    // Main 
     public static void main(String[] args) {
         if (args.length < 1) {
             usage();
@@ -122,4 +123,37 @@ public class Client {
         }
     }
 
-    
+    private static void play() throws IOException {
+        try (Socket socket = new Socket(address, serverPort);
+             MessageSocket ms = new MessageSocket(socket)) {
+
+            // OPTIONS
+            Message options = new OptionsMessage(address, cseq++);
+            ms.sendMessage(options);
+            System.out.println("Sent:\n" + options);
+            Message resp = ms.getMessage();
+            System.out.println("Received:\n" + resp);
+
+            // SETUP
+            Message setup = new SetUpMessage(address, cseq++, "RTP/AVP;unicast;client_port=8000-8001");
+            ms.sendMessage(setup);
+            System.out.println("Sent:\n" + setup);
+            resp = ms.getMessage();
+            System.out.println("Received:\n" + resp);
+
+            // For now server hardcodes session ID
+            sessionID = 123456;
+
+            // PLAY
+            Message play = new PlayPauseMessage("PLAY", address, cseq++, sessionID, "npt=0-");
+            ms.sendMessage(play);
+            System.out.println("Sent:\n" + play);
+            resp = ms.getMessage();
+            System.out.println("Received:\n" + resp);
+        }
+    }
+
+    // Future methods:
+    // private static void pause()
+    // private static void record()
+}
