@@ -114,7 +114,7 @@ public class Client {
             if (doPlay) {
                 play();
             } else if (doPause) {
-                // pause();
+                pause();
             } else if (doRecord) {
                 // record();
             }
@@ -153,7 +153,19 @@ public class Client {
         }
     }
 
+    private static void pause() throws IOException {
+        try (Socket socket = new Socket(address, serverPort);
+             MessageSocket ms = new MessageSocket(socket)) {
+
+            // PAUSE
+            Message pause = new PlayPauseMessage("PAUSE", address, cseq++, sessionID);
+            ms.sendMessage(pause);
+            System.out.println("Sent:\n" + pause);
+            Message resp = ms.getMessage();
+            System.out.println("Received:\n" + resp);
+        }
+    }
+
     // Future methods:
-    // private static void pause()
     // private static void record()
 }
