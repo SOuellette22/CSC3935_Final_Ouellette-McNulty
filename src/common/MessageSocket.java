@@ -81,6 +81,13 @@ public class MessageSocket extends Socket {
                 recv.nextLine(); // Read the empty line
 
                 return new OptionsMessage(stringMsg);
+            case "DESCRIBE":
+
+                stringMsg += recv.nextLine() + "\r\n"; // Read the Accept line
+
+                recv.nextLine(); // Read the empty line
+
+                return new DescribeMessage(stringMsg);
             case "SETUP":
 
                 stringMsg += recv.nextLine() + "\r\n"; // Read the Transport line
@@ -102,6 +109,29 @@ public class MessageSocket extends Socket {
                 }
 
                 return new PlayPauseMessage(stringMsg);
+            case "RECORD":
+
+                stringMsg += recv.nextLine() + "\r\n"; // Read the Session line
+
+                stringMsg += recv.nextLine() + "\r\n"; // Read the Range line
+
+                recv.nextLine();
+
+                return new RecordMessage(stringMsg);
+            case "TEARDOWN":
+                stringMsg += recv.nextLine() + "\r\n"; // Read the Session line
+
+                recv.nextLine(); // Read the empty line
+
+                return new TeardownMessage(stringMsg);
+            case "DATA":
+                stringMsg += recv.nextLine() + "\r\n"; // Read the Sequence Number line
+
+                stringMsg += recv.nextLine() + "\r\n"; // Read the Data line
+
+                recv.nextLine(); // Read the empty line
+
+                return new DataMessage(stringMsg);
             case "RTSP/1.0":
 
                 temp = recv.nextLine();

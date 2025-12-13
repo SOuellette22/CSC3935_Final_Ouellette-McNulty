@@ -1,10 +1,7 @@
 package client;
 
 import common.MessageSocket;
-import common.messages.Message;
-import common.messages.OptionsMessage;
-import common.messages.PlayPauseMessage;
-import common.messages.SetUpMessage;
+import common.messages.*;
 
 import java.io.IOException;
 
@@ -16,7 +13,7 @@ class Client {
         try {
             MessageSocket messageSocket = new MessageSocket("localhost", 5000);
 
-            Message msg = new OptionsMessage("localhost", 1);
+            Message msg = new DataMessage("localhost", 1, 1234, "10101010010001010101");
             messageSocket.sendMessage(msg);
             System.out.println("Sent message: \n" + msg);
 

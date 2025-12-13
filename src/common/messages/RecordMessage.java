@@ -5,14 +5,6 @@ public class RecordMessage extends Message{
     private int sessionID;
     private String range;
 
-    /**
-     * Constructor creates a new RECORD message for parameters
-     */
-    public RecordMessage(String header, int cseq, int sessionID) {
-        super("RECORD", header, cseq);
-        this.sessionID = sessionID;
-    }
-
     public RecordMessage(String header, int cseq, int sessionID, String range) {
         super("RECORD", header, cseq);
         this.sessionID = sessionID;

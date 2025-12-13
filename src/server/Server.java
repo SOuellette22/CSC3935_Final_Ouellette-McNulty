@@ -155,7 +155,10 @@ class Server {
                         System.out.println("Sent message: \n" + msg);
                     }
                     default -> {
-                        System.err.println("Unknown message type received: " + msg.getType());
+                        msg = new ServerResponse.ResponseBuilder(501, msg.getCseq())
+                                .build();
+                        messageSocket.sendMessage(msg);
+                        System.out.println("Sent message: \n" + msg);
                     }
                 }
 
