@@ -116,7 +116,7 @@ public class Client {
             } else if (doPause) {
                 pause();
             } else if (doRecord) {
-                // record();
+                record();
             }
         } catch (IOException e) {
             System.err.println("IO Error: " + e.getMessage());
@@ -166,6 +166,16 @@ public class Client {
         }
     }
 
-    // Future methods:
-    // private static void record()
+    private static void record() throws IOException {
+        try (Socket socket = new Socket(address, serverPort);
+             MessageSocket ms = new MessageSocket(socket)) {
+
+            // RECORD
+            Message record = new RecordMessage(address, cseq++, sessionID, "npt=0-30");
+            ms.sendMessage(record);
+            System.out.println("Sent:\n" + record);
+            Message resp = ms.getMessage();
+            System.out.println("Received:\n" + resp);
+        }
+    }
 }
