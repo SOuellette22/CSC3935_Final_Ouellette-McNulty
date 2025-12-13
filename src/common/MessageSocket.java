@@ -67,6 +67,10 @@ public class MessageSocket extends Socket {
      */
     public Message getMessage() throws RuntimeException {
 
+        while (!recv.hasNextLine()) {
+
+        }
+
         String temp;
 
         String stringMsg =
@@ -100,13 +104,9 @@ public class MessageSocket extends Socket {
 
                 stringMsg += recv.nextLine() + "\r\n"; // Read the Session line
 
-                temp = recv.nextLine(); // Read the next line
+                recv.nextLine(); // Read the empty line
 
-                if (temp.startsWith("Range:")) { // Check for Range line
-                    stringMsg += temp + "\r\n"; // Read the Range line if present
-
-                    recv.nextLine(); // Read the empty line
-                }
+                System.out.println("Complete PLAY/PAUSE message:\n" + stringMsg);
 
                 return new PlayPauseMessage(stringMsg);
             case "RECORD":
@@ -143,10 +143,10 @@ public class MessageSocket extends Socket {
                         temp = recv.nextLine();
                         if (temp.startsWith("Transport:")) {
                             stringMsg += temp + "\r\n"; // Transport line
+
+                            recv.nextLine(); // Read the empty line
                         }
                     }
-
-                    recv.nextLine(); // Read the empty line
 
                 } else if (temp.startsWith("Public:")) { // Check for Public line
                     stringMsg += temp + "\r\n"; // Public line
