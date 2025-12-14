@@ -135,7 +135,7 @@ class Server {
 
                 MessageSocket messageSocket = new MessageSocket(serverSocket.accept());
 
-                pool.execute(new ConnectionHandler(messageSocket, serverLog));
+                pool.execute(new ConnectionHandler(messageSocket, serverLog, databaseDir));
 
             }
 

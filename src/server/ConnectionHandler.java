@@ -4,6 +4,8 @@ import common.MessageSocket;
 import common.messages.*;
 import merrimackutil.net.Log;
 
+import java.io.IOException;
+import java.net.ServerSocket;
 import java.util.Random;
 
 public class ConnectionHandler extends Thread {
@@ -11,13 +13,16 @@ public class ConnectionHandler extends Thread {
     private final MessageSocket socket;
     private final Log logger;
     private RTSPSates state;
+    private final String databaseDir;
+    private MessageSocket serverSocket;
 
     private int sessionId;
     private final Random r;
 
-    public ConnectionHandler(MessageSocket socket, Log logger) {
+    public ConnectionHandler(MessageSocket socket, Log logger, String databaseDir) {
         this.socket = socket;
         this.logger = logger;
+        this.databaseDir = databaseDir;
         this.state = RTSPSates.INIT;
         this.r = new Random();
     }
@@ -36,7 +41,7 @@ public class ConnectionHandler extends Thread {
                 case "OPTIONS" -> {
 
                     // Check if in valid state
-                    if (state != RTSPSates.INIT) {
+                    if (!(state == RTSPSates.INIT || state == RTSPSates.RECORDING)) {
                         msg = new ServerResponse.ResponseBuilder(455, msg.getCseq())
                                 .build();
                         socket.sendMessage(msg);
@@ -62,13 +67,17 @@ public class ConnectionHandler extends Thread {
                     }
 
                     sessionId = r.nextInt(1000000 - 100000) + 100000; // Generate random session ID
+                    int port = randomPort();
                     msg = new ServerResponse.ResponseBuilder(200, msg.getCseq())
                             .setSessionId(sessionId)
-                            .setTransport(((SetUpMessage) msg).getTransport() + ";server_port=9000-9001")
+                            .setTransport(((SetUpMessage) msg).getTransport() + ";server_port="+port)
                             .build();
                     state = RTSPSates.READY;
                     socket.sendMessage(msg);
                     logger.log("INFO: Sent SETUP response.");
+
+                    // Set up server socket for media streaming
+                    setUpServerSocket(port);
                 }
                 case "PLAY" -> {
 
@@ -82,6 +91,8 @@ public class ConnectionHandler extends Thread {
                     }
 
                     int sessionIdMsg = ((PlayPauseMessage) msg).getSessionID();
+                    String[] header = ((PlayPauseMessage) msg).getHeader().split(" ");
+
                     if (sessionIdMsg != sessionId) {
                         msg = new ServerResponse.ResponseBuilder(454, msg.getCseq())
                                 .build();
@@ -95,10 +106,9 @@ public class ConnectionHandler extends Thread {
                             .build();
                     state = RTSPSates.PLAYING;
                     socket.sendMessage(msg);
-
-                    // TODO: Start streaming media data to client
-
                     logger.log("INFO: Sent PLAY response.");
+
+                    // TODO: Start streaming media data to client over the serverSocket
                 }
                 case "PAUSE" -> {
 
@@ -125,10 +135,90 @@ public class ConnectionHandler extends Thread {
                             .build();
                     state = RTSPSates.READY;
                     socket.sendMessage(msg);
+                    logger.log("INFO: Sent PAUSE response.");
 
                     // TODO: Pause streaming media data to client
 
-                    logger.log("INFO: Sent PAUSE response.");
+                }
+                case "RECORD" -> {
+
+                    // Check if in valid state
+                    if (state != RTSPSates.READY) {
+                        msg = new ServerResponse.ResponseBuilder(455, msg.getCseq())
+                                .build();
+                        socket.sendMessage(msg);
+                        logger.log("ERROR: Method not valid in current state.");
+                        break;
+                    }
+
+                    int sessionIdMsg = ((PlayPauseMessage) msg).getSessionID();
+                    if (sessionIdMsg != sessionId) {
+                        msg = new ServerResponse.ResponseBuilder(454, msg.getCseq())
+                                .build();
+                        socket.sendMessage(msg);
+                        logger.log("ERROR: Session ID mismatch.");
+                        break;
+                    }
+
+                    msg = new ServerResponse.ResponseBuilder(200, msg.getCseq())
+                            .setSessionId(sessionId)
+                            .build();
+                    state = RTSPSates.RECORDING;
+                    socket.sendMessage(msg);
+                    logger.log("INFO: Sent RECORD response.");
+
+                    // TODO: Start recording media data from client over the serverSocket
+                }
+                case "DESCRIBE" -> {
+
+                    // Check if in valid state
+                    if (state != RTSPSates.INIT) {
+                        msg = new ServerResponse.ResponseBuilder(455, msg.getCseq())
+                                .build();
+                        socket.sendMessage(msg);
+                        logger.log("ERROR: Method not valid in current state.");
+                        break;
+                    }
+
+                    String sdpInfo = "v=0\n" +
+                            "o=- 1 1 IN IP4 127.0.0.1\n" +
+                            "s=Stereo PCM Audio\n" +
+                            "t=0 0\n" +
+                            "m=audio 0 RTP/AVP 96\n" +
+                            "a=rtpmap:96 L16/44100/2";
+
+                    msg = new ServerResponse.ResponseBuilder(200, msg.getCseq())
+                            .setContentType("application/sdp")
+                            .setContentLength(sdpInfo.length())
+                            .setBody(sdpInfo)
+                            .build();
+                    socket.sendMessage(msg);
+                    logger.log("INFO: Sent DESCRIBE response.");
+                }
+                case "TEARDOWN" -> {
+                    // Check if in valid state
+                    if (state == RTSPSates.INIT) {
+                        msg = new ServerResponse.ResponseBuilder(455, msg.getCseq())
+                                .build();
+                        socket.sendMessage(msg);
+                        logger.log("ERROR: Method not valid in current state.");
+                        break;
+                    }
+
+                    int sessionIdMsg = ((TeardownMessage) msg).getSessionID();
+                    if (sessionIdMsg != sessionId) {
+                        msg = new ServerResponse.ResponseBuilder(454, msg.getCseq())
+                                .build();
+                        socket.sendMessage(msg);
+                        logger.log("ERROR: Session ID mismatch.");
+                        break;
+                    }
+
+                    msg = new ServerResponse.ResponseBuilder(200, msg.getCseq())
+                            .build();
+                    state = RTSPSates.TEARDOWN;
+                    socket.sendMessage(msg);
+                    logger.log("INFO: Sent TEARDOWN response.");
                 }
                 default -> {
                     msg = new ServerResponse.ResponseBuilder(400, msg.getCseq())
@@ -137,6 +227,44 @@ public class ConnectionHandler extends Thread {
                     logger.log("ERROR: Unsupported method.");
                 }
             }
+        }
+
+        logger.log("Connection handler terminating.");
+
+         // Close sockets
+        try {
+            socket.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Allocates a random available port on the server.
+     *
+     * @return An available port number.
+     */
+    private int randomPort() {
+        try (ServerSocket socket = new ServerSocket(0)) {
+            return socket.getLocalPort();
+        } catch (Exception e) {
+            logger.log("ERROR: Unable to allocate random port.");
+            return -1;
+        }
+    }
+
+    /**
+     * Sets up a server socket to listen for media streaming on the specified port.
+     *
+     * @param port The port number to listen on.
+     */
+    private void setUpServerSocket(int port) {
+        try {
+            ServerSocket serverSocket = new ServerSocket(port);
+
+            this.serverSocket = new MessageSocket(serverSocket.accept());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 }
