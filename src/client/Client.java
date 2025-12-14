@@ -10,19 +10,16 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.Scanner;
 
-/**
- * This is the client
- */
 public class Client {
 
     private static boolean doHelp = false;
-    private static String address = null;
+    private static String address = null; // server address
     private static int serverPort = 5000; // default RTSP port
     private static int cseq = 1;
     private static int sessionID;
 
     /**
-     * Prints the usage to the screen and exits.
+     * Prints the usage message for the client application
      */
     public static void usage() {
         System.out.println("Usage: ");
@@ -39,9 +36,8 @@ public class Client {
         System.out.println("  help      - Show available commands");
     }
 
-     /**
-     * Processes the command line arugments.
-     * @param args the command line arguments.
+    /**
+     * Processes command-line arguments
      */
     public static void processArgs(String[] args) {
         OptionParser parser;
@@ -102,45 +98,52 @@ public class Client {
         processArgs(args);
 
         try (Socket socket = new Socket(address, serverPort);
-             MessageSocket ms = new MessageSocket(socket);
-             Scanner scan = new Scanner(System.in)) {
+             MessageSocket ms = new MessageSocket(socket)) {
 
-            System.out.println("Connected to " + address + ":" + serverPort);
-            System.out.println("Type 'help' for commands. Type 'teardown' to exit.");
-
-            boolean done = false;
-
-            while (!done) {
-                System.out.print("> ");
-                String command = scan.nextLine().trim().toLowerCase();
-
-                switch (command) {
-                    case "play":
-                        play(ms);
-                        break;
-                    case "pause":
-                        pause(ms);
-                        break;
-                    case "record":
-                        record(ms);
-                        break;
-                    case "teardown":
-                        teardown(ms);
-                        done = true;
-                        break;
-                    case "help":
-                        System.out.println("Commands: play, pause, record, teardown, help");
-                        break;
-                    default:
-                        System.out.println("Unknown command: " + command);
-                }
-            }
+            doCLI(ms);
 
         } catch (IOException e) {
             System.err.println("IO Error: " + e.getMessage());
         }
     }
-    //Message methods
+
+    /**
+     * Interactive CLI loop: stays connected until teardown is sent
+     */
+    public static void doCLI(MessageSocket ms) throws IOException {
+        Scanner scan = new Scanner(System.in);
+        boolean done = false;
+
+        System.out.println("Connected to " + address + ":" + serverPort);
+        System.out.println("Type 'help' for commands. Type 'teardown' to exit.");
+
+        while (!done) {
+            System.out.print("> ");
+            String command = scan.nextLine().trim().toLowerCase();
+
+            switch (command) {
+                case "play":
+                    play(ms);
+                    break;
+                case "pause":
+                    pause(ms);
+                    break;
+                case "record":
+                    record(ms);
+                    break;
+                case "teardown":
+                    teardown(ms);
+                    done = true;
+                    break;
+                case "help":
+                    System.out.println("Commands: play, pause, record, teardown, help");
+                    break;
+                default:
+                    System.out.println("Unknown command: " + command);
+            }
+        }
+    }
+
     private static void play(MessageSocket ms) throws IOException {
         // OPTIONS
         Message options = new OptionsMessage(address, cseq++);
