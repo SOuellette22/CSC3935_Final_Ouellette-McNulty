@@ -8,74 +8,58 @@ import merrimackutil.util.Tuple;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.util.Scanner;
 
+/**
+ * This is the client
+ */
 public class Client {
 
-    private static boolean doPlay = false;
-    private static boolean doPause = false;
-    private static boolean doRecord = false;
-    private static boolean doTeardown = false;
     private static boolean doHelp = false;
-
-    private static String address = null; // server address
+    private static String address = null;
     private static int serverPort = 5000; // default RTSP port
     private static int cseq = 1;
     private static int sessionID;
 
     /**
-     * Prints the usage message for the client application
+     * Prints the usage to the screen and exits.
      */
     public static void usage() {
         System.out.println("Usage: ");
-        System.out.println("  client --play <server>[:port]");
-        System.out.println("  client --pause <server>[:port]");
-        System.out.println("  client --record <server>[:port]");
-        System.out.println("  client --teardown <server>[:port]");
+        System.out.println("  client --server <addr>[:port]");
         System.out.println("  client --help");
         System.out.println("Options: ");
-        System.out.printf("  %-15s %-20s\n", "-p, --play", "Play an audio file from the server");
-        System.out.printf("  %-15s %-20s\n", "-u, --pause", "Pause the current audio stream");
-        System.out.printf("  %-15s %-20s\n", "-r, --record", "Record an audio file on the server");
-        System.out.printf("  %-15s %-20s\n", "-t, --teardown", "End the current session and release resources");
+        System.out.printf("  %-15s %-20s\n", "-s, --server", "Specify the server address and optional port");
         System.out.printf("  %-15s %-20s\n", "-h, --help", "Display this help message");
+        System.out.println("\nOnce connected, type commands:");
+        System.out.println("  play      - Play an audio file");
+        System.out.println("  pause     - Pause playback");
+        System.out.println("  record    - Record audio");
+        System.out.println("  teardown  - End session and exit");
+        System.out.println("  help      - Show available commands");
     }
 
-    /**
-     * Processes command-line arguments
+     /**
+     * Processes the command line arugments.
+     * @param args the command line arguments.
      */
     public static void processArgs(String[] args) {
         OptionParser parser;
 
-        LongOption[] opts = new LongOption[4];
-        opts[0] = new LongOption("play", true, 'p');
-        opts[1] = new LongOption("pause", true, 'u');
-        opts[2] = new LongOption("record", true, 'r');
-        opts[3] = new LongOption("teardown", true, 't');
-        opts[4] = new LongOption("help", false, 'h');
+        LongOption[] opts = new LongOption[2];
+        opts[0] = new LongOption("server", true, 's');
+        opts[1] = new LongOption("help", false, 'h');
 
         parser = new OptionParser(args);
         parser.setLongOpts(opts);
-        parser.setOptString("p:u:r:t:h");
+        parser.setOptString("s:h");
 
         Tuple<Character, String> currOpt;
 
         while (parser.getOptIdx() != args.length) {
             currOpt = parser.getLongOpt(false);
             switch (currOpt.getFirst()) {
-                case 'p':
-                    doPlay = true;
-                    parseServer(currOpt.getSecond());
-                    break;
-                case 'u':
-                    doPause = true;
-                    parseServer(currOpt.getSecond());
-                    break;
-                case 'r':
-                    doRecord = true;
-                    parseServer(currOpt.getSecond());
-                    break;
-                case 't':
-                    doTeardown = true;
+                case 's':
                     parseServer(currOpt.getSecond());
                     break;
                 case 'h':
@@ -93,7 +77,7 @@ public class Client {
             System.exit(0);
         }
 
-        if ((doPlay || doPause || doRecord || doTeardown) && address == null) {
+        if (address == null) {
             System.out.println("Missing server address.");
             usage();
         }
@@ -109,7 +93,6 @@ public class Client {
         }
     }
 
-    // Main 
     public static void main(String[] args) {
         if (args.length < 1) {
             usage();
@@ -118,88 +101,93 @@ public class Client {
 
         processArgs(args);
 
-        try {
-            if (doPlay) {
-                play();
-            } else if (doPause) {
-                pause();
-            } else if (doRecord) {
-                record();
-            } else if (doTeardown) {
-                teardown();
+        try (Socket socket = new Socket(address, serverPort);
+             MessageSocket ms = new MessageSocket(socket);
+             Scanner scan = new Scanner(System.in)) {
+
+            System.out.println("Connected to " + address + ":" + serverPort);
+            System.out.println("Type 'help' for commands. Type 'teardown' to exit.");
+
+            boolean done = false;
+
+            while (!done) {
+                System.out.print("> ");
+                String command = scan.nextLine().trim().toLowerCase();
+
+                switch (command) {
+                    case "play":
+                        play(ms);
+                        break;
+                    case "pause":
+                        pause(ms);
+                        break;
+                    case "record":
+                        record(ms);
+                        break;
+                    case "teardown":
+                        teardown(ms);
+                        done = true;
+                        break;
+                    case "help":
+                        System.out.println("Commands: play, pause, record, teardown, help");
+                        break;
+                    default:
+                        System.out.println("Unknown command: " + command);
+                }
             }
+
         } catch (IOException e) {
             System.err.println("IO Error: " + e.getMessage());
         }
     }
+    //Message methods
+    private static void play(MessageSocket ms) throws IOException {
+        // OPTIONS
+        Message options = new OptionsMessage(address, cseq++);
+        ms.sendMessage(options);
+        System.out.println("Sent:\n" + options);
+        Message resp = ms.getMessage();
+        System.out.println("Received:\n" + resp);
 
-    private static void play() throws IOException {
-        try (Socket socket = new Socket(address, serverPort);
-             MessageSocket ms = new MessageSocket(socket)) {
+        // SETUP
+        Message setup = new SetUpMessage(address, cseq++, "RTP/AVP;unicast;client_port=8000-8001");
+        ms.sendMessage(setup);
+        System.out.println("Sent:\n" + setup);
+        resp = ms.getMessage();
+        System.out.println("Received:\n" + resp);
 
-            // OPTIONS
-            Message options = new OptionsMessage(address, cseq++);
-            ms.sendMessage(options);
-            System.out.println("Sent:\n" + options);
-            Message resp = ms.getMessage();
-            System.out.println("Received:\n" + resp);
+        // For now, assume server hardcodes session ID
+        sessionID = 123456;
 
-            // SETUP
-            Message setup = new SetUpMessage(address, cseq++, "RTP/AVP;unicast;client_port=8000-8001");
-            ms.sendMessage(setup);
-            System.out.println("Sent:\n" + setup);
-            resp = ms.getMessage();
-            System.out.println("Received:\n" + resp);
-
-            // For now server hardcodes session ID
-            sessionID = 123456;
-
-            // PLAY
-            Message play = new PlayPauseMessage("PLAY", address, cseq++, sessionID, "npt=0-");
-            ms.sendMessage(play);
-            System.out.println("Sent:\n" + play);
-            resp = ms.getMessage();
-            System.out.println("Received:\n" + resp);
-        }
+        // PLAY
+        Message play = new PlayPauseMessage("PLAY", address, cseq++, sessionID, "npt=0-");
+        ms.sendMessage(play);
+        System.out.println("Sent:\n" + play);
+        resp = ms.getMessage();
+        System.out.println("Received:\n" + resp);
     }
 
-    private static void pause() throws IOException {
-        try (Socket socket = new Socket(address, serverPort);
-             MessageSocket ms = new MessageSocket(socket)) {
-
-            // PAUSE
-            Message pause = new PlayPauseMessage("PAUSE", address, cseq++, sessionID);
-            ms.sendMessage(pause);
-            System.out.println("Sent:\n" + pause);
-            Message resp = ms.getMessage();
-            System.out.println("Received:\n" + resp);
-        }
+    private static void pause(MessageSocket ms) throws IOException {
+        Message pause = new PlayPauseMessage("PAUSE", address, cseq++, sessionID);
+        ms.sendMessage(pause);
+        System.out.println("Sent:\n" + pause);
+        Message resp = ms.getMessage();
+        System.out.println("Received:\n" + resp);
     }
 
-    private static void record() throws IOException {
-        try (Socket socket = new Socket(address, serverPort);
-             MessageSocket ms = new MessageSocket(socket)) {
-
-            // RECORD
-            Message record = new RecordMessage(address, cseq++, sessionID, "npt=0-30");
-            ms.sendMessage(record);
-            System.out.println("Sent:\n" + record);
-            Message resp = ms.getMessage();
-            System.out.println("Received:\n" + resp);
-        }
+    private static void record(MessageSocket ms) throws IOException {
+        Message record = new RecordMessage(address, cseq++, sessionID, "npt=0-30");
+        ms.sendMessage(record);
+        System.out.println("Sent:\n" + record);
+        Message resp = ms.getMessage();
+        System.out.println("Received:\n" + resp);
     }
 
-    private static void teardown() throws IOException {
-        try (Socket socket = new Socket(address, serverPort);
-            MessageSocket ms = new MessageSocket(socket)) {
-
-            // TEARDOWN
-            Message teardown = new TeardownMessage(address, cseq++, sessionID);
-            ms.sendMessage(teardown);
-            System.out.println("Sent:\n" + teardown);
-
-            Message resp = ms.getMessage();
-            System.out.println("Received:\n" + resp);
-        }
+    private static void teardown(MessageSocket ms) throws IOException {
+        Message teardown = new TeardownMessage(address, cseq++, sessionID);
+        ms.sendMessage(teardown);
+        System.out.println("Sent:\n" + teardown);
+        Message resp = ms.getMessage();
+        System.out.println("Received:\n" + resp);
     }
 }
