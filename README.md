@@ -23,6 +23,83 @@ java -jar dist/server.jar
 java -jar dist/client.jar
 ```
 
+## Protocol Diagram
+
+### Now what Message Types and Description of Server
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Note over Client,Server: Connection Establishment
+    Client->>Server: OPTIONS
+    Server->>Client: 200 OK (Supported methods)
+
+    Note over Client,Server: Session Description
+    Client->>Server: DESCRIBE
+    Server->>Client: 200 OK (Media description)
+
+    Note over Client,Server: Session Termination
+    Client->>Server: TEARDOWN
+    Server->>Client: 200 OK
+```
+
+### Playing Music
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Note over Client,Server: Session Setup
+    Client->>Server: SETUP
+    Server->>Client: 200 OK (Session ID, transport info)
+
+    Note over Client,Server: Playback
+    Client->>Server: PLAY
+    Server->>Client: 200 OK
+    loop During Playback
+        Server->>Client: Data Messages (media stream)
+    end
+
+    Note over Client,Server: Pause Playback
+    Client->>Server: PAUSE
+    Server->>Client: 200 OK
+
+    Note over Client,Server: Resume Playback
+    Client->>Server: PLAY
+    Server->>Client: 200 OK
+    loop During Playback
+        Server->>Client: Data Messages (media stream)
+    end
+
+    Note over Client,Server: Session Termination
+    Client->>Server: TEARDOWN
+    Server->>Client: 200 OK
+```
+
+### Record Music onto Server
+
+```mermaid
+   sequenceDiagram
+    participant Client
+    participant Server
+
+    Note over Client,Server: Session Setup
+    Client->>Server: SETUP
+    Server->>Client: 200 OK (Session ID, transport info)
+
+    Note over Client,Server: Recording
+    Client->>Server: RECORD
+    Server->>Client: 200 OK
+    loop During Recording
+        Client->>Server: Data Messages (media upload)
+    end
+
+    Note over Client,Server: Session Termination
+    Client->>Server: TEARDOWN
+    Server->>Client: 200 OK
+```
+
 ## Methods Included
 
 ### Options
@@ -30,7 +107,7 @@ java -jar dist/client.jar
  - Example of how the messages are structured;
    ```
    C -> S
-   Option * RTSP/1.0
+   Options * RTSP/1.0
    CSeq: x
 
    ------------------------------
@@ -141,7 +218,10 @@ java -jar dist/client.jar
    CSeq: x
    ```
 
+# Contributers
 
+Sean Ouellette
+Erin McNulty
 
    
    
