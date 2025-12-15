@@ -33,25 +33,44 @@ class Client {
             sessionId = ((ServerResponse) msg).getSessionId();
             System.out.println("Received message: \n" + msg);
 
-            msg = new PlayPauseMessage("PLAY","rtsp://localhost/media.mp4", 3, sessionId);
+            msg = new PlayPauseMessage("PLAY","rtsp://localhost/music/Audio1.wav", 3, sessionId);
             messageSocket.sendMessage(msg);
             System.out.println("Sent message: \n" + msg);
 
             msg = messageSocket.getMessage();
             System.out.println("Received message: \n" + msg);
 
-            msg = new PlayPauseMessage("PAUSE","rtsp://localhost/media.mp4", 4, sessionId);
+            PlaySong playSong = new PlaySong(playbackSocket, sessionId);
+            playSong.start();
+            Thread.sleep(1000 * 10);
+
+            msg = new PlayPauseMessage("PAUSE","rtsp://localhost/music/Audio1.wav", 4, sessionId);
             messageSocket.sendMessage(msg);
             System.out.println("Sent message: \n" + msg);
 
             msg = messageSocket.getMessage();
             System.out.println("Received message: \n" + msg);
 
-            msg = new TeardownMessage("rtsp://localhost/media.mp4", 5, sessionId);
+            playSong.pausePlayback();
+            Thread.sleep(1000 * 5);
+
+            msg = new PlayPauseMessage("PLAY","rtsp://localhost/music/Audio1.wav", 3, sessionId);
             messageSocket.sendMessage(msg);
             System.out.println("Sent message: \n" + msg);
 
-        } catch (IOException e) {
+            msg = messageSocket.getMessage();
+            System.out.println("Received message: \n" + msg);
+            playSong.pausePlayback();
+            Thread.sleep(1000 * 10);
+
+            msg = new TeardownMessage("rtsp://localhost/music/Audio1.wav", 5, sessionId);
+            messageSocket.sendMessage(msg);
+            System.out.println("Sent message: \n" + msg);
+
+            msg = messageSocket.getMessage();
+            System.out.println("Received message: \n" + msg);
+
+        } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
     }

@@ -4,8 +4,11 @@ import common.MessageSocket;
 import common.messages.*;
 import merrimackutil.net.Log;
 
+import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.net.ServerSocket;
+import java.util.Arrays;
 import java.util.Random;
 
 public class ConnectionHandler extends Thread {
@@ -15,6 +18,7 @@ public class ConnectionHandler extends Thread {
     private RTSPSates state;
     private final String databaseDir;
     private MessageSocket serverSocket;
+    private PlayHandler playHandler;
 
     private int sessionId;
     private final Random r;
@@ -91,7 +95,16 @@ public class ConnectionHandler extends Thread {
                     }
 
                     int sessionIdMsg = ((PlayPauseMessage) msg).getSessionID();
-                    String[] header = ((PlayPauseMessage) msg).getHeader().split(" ");
+                    String path = databaseDir + "/" + msg.getHeader().split("/",4)[3];
+
+                    File file = new File(path);
+                    if (!file.exists() || file.isDirectory()) {
+                        msg = new ServerResponse.ResponseBuilder(404, msg.getCseq())
+                                .build();
+                        socket.sendMessage(msg);
+                        logger.log("ERROR: File not found.");
+                        break;
+                    }
 
                     if (sessionIdMsg != sessionId) {
                         msg = new ServerResponse.ResponseBuilder(454, msg.getCseq())
@@ -108,7 +121,14 @@ public class ConnectionHandler extends Thread {
                     socket.sendMessage(msg);
                     logger.log("INFO: Sent PLAY response.");
 
-                    // TODO: Start streaming media data to client over the serverSocket
+                    logger.log("INFO: Playing file at path: " + path);
+
+                    if (playHandler == null) {
+                        playHandler = new PlayHandler(serverSocket, path, logger, sessionIdMsg);
+                        playHandler.start();
+                    } else {
+                        playHandler.pausePlayback();
+                    }
                 }
                 case "PAUSE" -> {
 
@@ -129,7 +149,6 @@ public class ConnectionHandler extends Thread {
                         logger.log("ERROR: Session ID mismatch.");
                         break;
                     }
-
                     msg = new ServerResponse.ResponseBuilder(200, msg.getCseq())
                             .setSessionId(sessionId)
                             .build();
@@ -137,7 +156,7 @@ public class ConnectionHandler extends Thread {
                     socket.sendMessage(msg);
                     logger.log("INFO: Sent PAUSE response.");
 
-                    // TODO: Pause streaming media data to client
+                    playHandler.pausePlayback();
 
                 }
                 case "RECORD" -> {
@@ -152,11 +171,22 @@ public class ConnectionHandler extends Thread {
                     }
 
                     int sessionIdMsg = ((PlayPauseMessage) msg).getSessionID();
+                    String path = msg.getHeader().split("/",4)[3];
+
                     if (sessionIdMsg != sessionId) {
                         msg = new ServerResponse.ResponseBuilder(454, msg.getCseq())
                                 .build();
                         socket.sendMessage(msg);
                         logger.log("ERROR: Session ID mismatch.");
+                        break;
+                    }
+
+                    File file = new File(databaseDir + "/" + path);
+                    if (!file.exists() || file.isDirectory()) {
+                        msg = new ServerResponse.ResponseBuilder(403, msg.getCseq())
+                                .build();
+                        socket.sendMessage(msg);
+                        logger.log("ERROR: File not found.");
                         break;
                     }
 
@@ -213,6 +243,9 @@ public class ConnectionHandler extends Thread {
                         logger.log("ERROR: Session ID mismatch.");
                         break;
                     }
+
+                    playHandler.pausePlayback();
+                    playHandler = null;
 
                     msg = new ServerResponse.ResponseBuilder(200, msg.getCseq())
                             .build();
