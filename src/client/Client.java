@@ -158,10 +158,17 @@ public class Client {
         Message setup = new SetUpMessage(address, cseq++, "RTP/AVP;unicast;client_port=8000-8001");
         ms.sendMessage(setup);
         System.out.println("Sent:\n" + setup);
+
         Message resp = ms.getMessage();
         System.out.println("Received:\n" + resp);
-        // TODO: parse sessionID from resp instead of hardcoding
-        sessionID = 123456;
+
+        if (resp instanceof ServerResponse) {
+            ServerResponse serverResp = (ServerResponse) resp;
+            sessionID = serverResp.getSessionId();   // <-- capture session ID
+            System.out.println("Session ID set to: " + sessionID);
+        } else {
+            System.out.println("Warning: SETUP response did not include a session ID.");
+        }
     }
 
     private static void sendPlay(MessageSocket ms, String file) throws IOException {
