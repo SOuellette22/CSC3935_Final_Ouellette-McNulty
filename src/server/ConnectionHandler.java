@@ -170,7 +170,7 @@ public class ConnectionHandler extends Thread {
                         break;
                     }
 
-                    int sessionIdMsg = ((PlayPauseMessage) msg).getSessionID();
+                    int sessionIdMsg = ((RecordMessage) msg).getSessionID();
                     String path = msg.getHeader().split("/",4)[3];
 
                     if (sessionIdMsg != sessionId) {
@@ -182,11 +182,12 @@ public class ConnectionHandler extends Thread {
                     }
 
                     File file = new File(databaseDir + "/" + path);
-                    if (!file.exists() || file.isDirectory()) {
+
+                    if (file.exists() || file.isDirectory()) {
                         msg = new ServerResponse.ResponseBuilder(403, msg.getCseq())
                                 .build();
                         socket.sendMessage(msg);
-                        logger.log("ERROR: File not found.");
+                        logger.log("ERROR: File already exists.");
                         break;
                     }
 
@@ -197,7 +198,9 @@ public class ConnectionHandler extends Thread {
                     socket.sendMessage(msg);
                     logger.log("INFO: Sent RECORD response.");
 
-                    // TODO: Start recording media data from client over the serverSocket
+                    RecordHandler recordHandler = new RecordHandler(serverSocket, sessionIdMsg, file, logger);
+                    recordHandler.start();
+
                 }
                 case "DESCRIBE" -> {
 
@@ -297,6 +300,7 @@ public class ConnectionHandler extends Thread {
 
             this.serverSocket = new MessageSocket(serverSocket.accept());
         } catch (IOException e) {
+            logger.log("ERROR: Unable to set up server socket on port " + port);
             throw new RuntimeException(e);
         }
     }
