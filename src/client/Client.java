@@ -195,13 +195,16 @@ public class Client {
         System.out.println("Received:\n" + resp);
     }
 
-    private static void sendRecord(MessageSocket ms) throws IOException {
-        Message record = new RecordMessage(address, cseq++, sessionID, "npt=0-30");
+    private static void sendRecord(MessageSocket ms, String filePath) throws IOException {
+        // Construct a RECORD message with the file path included in the header
+        Message record = new RecordMessage(address + "/" + filePath, cseq++, sessionID, "npt=0-30");
         ms.sendMessage(record);
         System.out.println("Sent:\n" + record);
+
         Message resp = ms.getMessage();
         System.out.println("Received:\n" + resp);
     }
+
 
     public static void main(String[] args) {
         if (args.length < 1) {
