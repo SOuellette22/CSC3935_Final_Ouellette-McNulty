@@ -17,17 +17,19 @@ public class Client {
     private static int serverPort = 5000; // default RTSP port
     private static int cseq = 1;
     private static int sessionID;
+    private static boolean setupComplete = false;
 
     /**
      * Prints the usage message for the client application
      */
     public static void usage() {
-        System.out.println("Usage: ");
+        System.out.println("Usage:");
         System.out.println("  client --server <addr>[:port]");
         System.out.println("  client --help");
-        System.out.println("Options: ");
-        System.out.printf("  %-15s %-20s\n", "-s, --server", "Specify the server address and optional port");
-        System.out.printf("  %-15s %-20s\n", "-h, --help", "Display this help message");
+        System.out.println("Options:");
+        System.out.println("  -s, --server   Server address and optional port");
+        System.out.println("  -h, --help     Display this help message");
+        System.exit(1);
     }
 
     /**
@@ -58,13 +60,11 @@ public class Client {
                 default:
                     System.out.println("Invalid option " + currOpt.getFirst());
                     usage();
-                    System.exit(1);
             }
         }
 
         if (doHelp) {
             usage();
-            System.exit(0);
         }
 
         if (address == null) {
@@ -83,75 +83,110 @@ public class Client {
         }
     }
 
+    public static void main(String[] args) {
+        if (args.length < 1) {
+            usage();
+        }
+
+        processArgs(args);
+
+        try (Socket socket = new Socket(address, serverPort);
+             MessageSocket ms = new MessageSocket(socket)) {
+
+            doCLI(ms);
+
+        } catch (IOException e) {
+            System.err.println("IO Error: " + e.getMessage());
+        }
+    }
+
     /**
      * Interactive CLI loop: stays connected until teardown is sent
      */
     public static void doCLI(MessageSocket ms) throws IOException {
-        String command;
         Scanner scan = new Scanner(System.in);
         boolean done = false;
 
-        System.out.println("Connected to " + adress + ":" serverPort);
-        System.out.println("Please type 'help' for help or 'teardown' to exit the application")
+        System.out.println("Connected to " + address + ":" + serverPort);
+        System.out.println("Type 'help' for commands. Type 'teardown' to exit.");
 
         while (!done) {
-            do {
-                Sysetm.out.print("> ");
-                command = scan.nextLine();
-                command = command.strip().toLowerCase();
-            } while (command.equals(""));
+            System.out.print("> ");
+            String command = scan.nextLine().trim().toLowerCase();
 
-            if (command.equals("teardown")) {
-                teardown(ms);
-                done = true;
-            }
-            else if (command.equals("plays")) {
-                play(ms);
-            }
-            else if (command.equals("pause")) {
-                pause(ms);
-            }
-            else if (command.equals("help")) {
-                System.out.println();
-                System.out.println("help\t\tdisplay this message.");
-                System.out.println("play\t\tstart playback");
-                System.out.println("pause\t\tpause playback");
-                System.out.println("record\t\trecord audio");
-                System.out.println("teardown\t\tend the session and exit")
-            }
-            else {
-                System.out.println("Error: \"" + command + "\" unknown";)
+            switch (command) {
+                case "options":
+                    sendOptions(ms);
+                    break;
+                case "setup":
+                    sendSetup(ms);
+                    setupComplete = true;
+                    break;
+                case "play":
+                    if (!setupComplete) {
+                        System.out.println("You must SETUP before PLAY.");
+                    } else {
+                        System.out.print("Enter file to play: ");
+                        String file = scan.nextLine().trim();
+                        sendPlay(ms, file);
+                    }
+                    break;
+                case "pause":
+                    if (!setupComplete) {
+                        System.out.println("You must SETUP before PAUSE.");
+                    } else {
+                        sendPause(ms);
+                    }
+                    break;
+                case "record":
+                    System.out.println("Recording requires a fresh session. Please TEARDOWN and SETUP again.");
+                    break;
+                case "teardown":
+                    sendTeardown(ms);
+                    done = true;
+                    break;
+                case "help":
+                    System.out.println("Commands:");
+                    System.out.println("  options   - query server capabilities");
+                    System.out.println("  setup     - reserve transport for session");
+                    System.out.println("  play      - play a file (requires setup)");
+                    System.out.println("  pause     - pause playback (requires setup)");
+                    System.out.println("  record    - record audio (requires new session)");
+                    System.out.println("  teardown  - end session and exit");
+                    break;
+                default:
+                    System.out.println("Unknown command: " + command);
             }
         }
     }
 
-    private static void play(MessageSocket ms) throws IOException {
-        // OPTIONS
-        Message options = new OptionsMessage(address, cseq++);
+    private static void sendOptions(MessageSocket ms) throws IOException {
+        Message options = new OptionsMessage(address, cseq++, "PLAY PAUSE TEARDOWN");
         ms.sendMessage(options);
         System.out.println("Sent:\n" + options);
         Message resp = ms.getMessage();
         System.out.println("Received:\n" + resp);
+    }
 
-        // SETUP
+    private static void sendSetup(MessageSocket ms) throws IOException {
         Message setup = new SetUpMessage(address, cseq++, "RTP/AVP;unicast;client_port=8000-8001");
         ms.sendMessage(setup);
         System.out.println("Sent:\n" + setup);
-        resp = ms.getMessage();
+        Message resp = ms.getMessage();
         System.out.println("Received:\n" + resp);
-
-        // For now, assume server hardcodes session ID
+        // TODO: parse sessionID from resp instead of hardcoding
         sessionID = 123456;
+    }
 
-        // PLAY
-        Message play = new PlayPauseMessage("PLAY", address, cseq++, sessionID, "npt=0-");
+    private static void sendPlay(MessageSocket ms, String file) throws IOException {
+        Message play = new PlayPauseMessage("PLAY", address + "/" + file, cseq++, sessionID, "npt=0-");
         ms.sendMessage(play);
         System.out.println("Sent:\n" + play);
-        resp = ms.getMessage();
+        Message resp = ms.getMessage();
         System.out.println("Received:\n" + resp);
     }
 
-    private static void pause(MessageSocket ms) throws IOException {
+    private static void sendPause(MessageSocket ms) throws IOException {
         Message pause = new PlayPauseMessage("PAUSE", address, cseq++, sessionID);
         ms.sendMessage(pause);
         System.out.println("Sent:\n" + pause);
@@ -159,40 +194,11 @@ public class Client {
         System.out.println("Received:\n" + resp);
     }
 
-    private static void record(MessageSocket ms) throws IOException {
-        Message record = new RecordMessage(address, cseq++, sessionID, "npt=0-30");
-        ms.sendMessage(record);
-        System.out.println("Sent:\n" + record);
-        Message resp = ms.getMessage();
-        System.out.println("Received:\n" + resp);
-    }
-
-    private static void teardown(MessageSocket ms) throws IOException {
+    private static void sendTeardown(MessageSocket ms) throws IOException {
         Message teardown = new TeardownMessage(address, cseq++, sessionID);
         ms.sendMessage(teardown);
         System.out.println("Sent:\n" + teardown);
         Message resp = ms.getMessage();
         System.out.println("Received:\n" + resp);
     }
-
-    /**
-     * The entry point
-     */
-    public static void main(String[] args) throws IOException {
-        if (args.length > 2)
-            usage();
-
-        processArgs(args);
-
-        try(Socket socket = new Socket(address, serverPort);
-        MessageSocket ms = new MessageSocket(socket)) {
-            doCLI(ms);
-        } catch (IOException e) {
-            System.err.println("client: " + e);
-            System.exit(1);
-        }
-
-        System.exit(0);
-    }
 }
-
