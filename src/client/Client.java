@@ -28,12 +28,6 @@ public class Client {
         System.out.println("Options: ");
         System.out.printf("  %-15s %-20s\n", "-s, --server", "Specify the server address and optional port");
         System.out.printf("  %-15s %-20s\n", "-h, --help", "Display this help message");
-        System.out.println("\nOnce connected, type commands:");
-        System.out.println("  play      - Play an audio file");
-        System.out.println("  pause     - Pause playback");
-        System.out.println("  record    - Record audio");
-        System.out.println("  teardown  - End session and exit");
-        System.out.println("  help      - Show available commands");
     }
 
     /**
@@ -100,6 +94,8 @@ public class Client {
         try (Socket socket = new Socket(address, serverPort);
              MessageSocket ms = new MessageSocket(socket)) {
 
+            System.out.println("Connected to " + address + ":" + serverPort);
+            Sysetm.out.println("Type 'help' for commands. Type 'teardown' to exit.");
             doCLI(ms);
 
         } catch (IOException e) {
@@ -113,9 +109,6 @@ public class Client {
     public static void doCLI(MessageSocket ms) throws IOException {
         Scanner scan = new Scanner(System.in);
         boolean done = false;
-
-        System.out.println("Connected to " + address + ":" + serverPort);
-        System.out.println("Type 'help' for commands. Type 'teardown' to exit.");
 
         while (!done) {
             System.out.print("> ");
