@@ -106,8 +106,6 @@ public class MessageSocket extends Socket {
 
                 recv.nextLine(); // Read the empty line
 
-                System.out.println("Complete PLAY/PAUSE message:\n" + stringMsg);
-
                 return new PlayPauseMessage(stringMsg);
             case "RECORD":
 
@@ -159,12 +157,16 @@ public class MessageSocket extends Socket {
                     stringMsg += "\r\n"; // Blank line
                     // Read content based on Content-Length
                     StringBuilder body = new StringBuilder();
-                    for (int i = 0; i < contentLength; i++) {
-                        body.append(recv.nextLine()).append("\n");
+                    while (recv.hasNextLine()) {
+                        String line = recv.nextLine();
+                        body.append(line).append("\n");
+                        if (body.length() >= contentLength) {
+                            break;
+                        }
                     }
                     stringMsg += body + "\r\n";
 
-                    recv.nextLine(); // Read the empty line
+                    System.out.println("Complete ServerResponse message:\n" + stringMsg);
                 }
 
                 return new ServerResponse(stringMsg);
