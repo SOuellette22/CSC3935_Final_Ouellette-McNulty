@@ -11,6 +11,11 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.Scanner;
 
+/**
+ * The Client class implements a command-line RTSP client that connects to a server,
+ * sends RTSP messages (OPTIONS, DESCRIBE, SETUP, PLAY, PAUSE, RECORD, TEARDOWN),
+ * and manages playback or recording sessions.
+ **/
 public class Client {
 
     private static boolean doHelp = false;
@@ -23,6 +28,9 @@ public class Client {
     private static PlaySong player = null;
     private static String playingFile = "";
 
+    /**
+     * Prints usage information for the client program and exits.
+     */
     public static void usage() {
         System.out.println("Usage:");
         System.out.println("  client --server <addr>[:port]");
@@ -33,6 +41,11 @@ public class Client {
         System.exit(1);
     }
 
+    /**
+     * Processes command-line arguments to configure the client.
+     *
+     * @param args The array of command-line arguments.
+     */
     public static void processArgs(String[] args) {
         OptionParser parser;
 
@@ -71,6 +84,11 @@ public class Client {
         }
     }
 
+    /**
+     * Parses the server argument string into address and port.
+     *
+     * @param arg The server argument in the form "address[:port]".
+     */
     private static void parseServer(String arg) {
         if (arg.contains(":")) {
             String[] parts = arg.split(":");
@@ -81,6 +99,13 @@ public class Client {
         }
     }
 
+    /**
+     * Runs the interactive command-line interface loop.
+     * Accepts user commands and sends corresponding RTSP messages to the server.
+     *
+     * @param ms The MessageSocket connected to the server.
+     * @throws IOException If an I/O error occurs while sending/receiving messages.
+     */
     public static void doCLI(MessageSocket ms) throws IOException {
         Scanner scan = new Scanner(System.in);
         boolean done = false;
@@ -156,6 +181,12 @@ public class Client {
     }
 
 
+    /**
+     * Sends an OPTIONS request to the server and prints supported methods.
+     *
+     * @param ms The MessageSocket connected to the server.
+     * @throws IOException If an I/O error occurs.
+     */
     private static void sendOptions(MessageSocket ms) throws IOException {
         Message options = new OptionsMessage("rtsp://" + address + ":" + serverPort, cseq++);
         ms.sendMessage(options);
@@ -167,6 +198,12 @@ public class Client {
         }
     }
 
+     /**
+     * Sends a DESCRIBE request to the server and prints the media description.
+     *
+     * @param ms The MessageSocket connected to the server.
+     * @throws IOException If an I/O error occurs.
+     */
     private static void sendDescribe(MessageSocket ms) throws IOException {
         Message describe = new DescribeMessage("rtsp://" + address + ":" + serverPort, cseq++, "application/sdp");
         ms.sendMessage(describe);
@@ -182,6 +219,13 @@ public class Client {
         }
     }
 
+    /**
+     * Sends a SETUP request to the server to establish a session.
+     * Captures the session ID and prepares a playback socket.
+     *
+     * @param ms The MessageSocket connected to the server.
+     * @throws IOException If an I/O error occurs.
+     */
     private static void sendSetup(MessageSocket ms) throws IOException {
         Message setup = new SetUpMessage("rtsp://" + address + ":" + serverPort, cseq++, "RTP/AVP;unicast;client_port=8000-8001");
         ms.sendMessage(setup);
@@ -202,6 +246,13 @@ public class Client {
         }
     }
 
+    /**
+     * Sends a PLAY request to the server to start or resume playback of a file.
+     *
+     * @param ms   The MessageSocket connected to the server.
+     * @param file The name of the file to play.
+     * @throws IOException If an I/O error occurs.
+     */
     private static void sendPlay(MessageSocket ms, String file) throws IOException {
         Message play = new PlayPauseMessage("PLAY", "rtsp://" + address + ":" + serverPort + "/" + file, cseq++, sessionID);
         ms.sendMessage(play);
@@ -225,6 +276,12 @@ public class Client {
         }
     }
 
+    /**
+     * Sends a PAUSE request to the server to pause playback.
+     *
+     * @param ms The MessageSocket connected to the server.
+     * @throws IOException If an I/O error occurs.
+     */
     private static void sendPause(MessageSocket ms) throws IOException {
         Message pause = new PlayPauseMessage("PAUSE", "rtsp://" + address + ":" + serverPort, cseq++, sessionID);
         ms.sendMessage(pause);
@@ -245,6 +302,13 @@ public class Client {
 
     }
 
+    /**
+     * Sends a TEARDOWN request to the server to end the session.
+     * Closes playback resources and resets state.
+     *
+     * @param ms The MessageSocket connected to the server.
+     * @throws IOException If an I/O error occurs.
+     */
     private static void sendTeardown(MessageSocket ms) throws IOException {
         Message teardown = new TeardownMessage("rtsp://" + address + ":" + serverPort, cseq++, sessionID);
         ms.sendMessage(teardown);
@@ -265,6 +329,15 @@ public class Client {
         }
     }
 
+     /**
+     * Sends a RECORD request to the server to upload audio data.
+     * Starts a SendSong thread to transmit the file.
+     *
+     * @param ms       The MessageSocket connected to the server.
+     * @param file     The server-side file name to save to.
+     * @param filePath The local file path to record from.
+     * @throws IOException If an I/O error occurs.
+     */
     private static void sendRecord(MessageSocket ms, String file, String filePath) throws IOException {
         // Construct a RECORD message with the file path included in the header
         Message record = new RecordMessage("rtsp://" + address + ":" + serverPort + "/" + file, cseq++, sessionID, "npt=0-30");
@@ -286,6 +359,12 @@ public class Client {
     }
 
 
+     /**
+     * Main entry point for the client program.
+     * Parses arguments, connects to the server, and starts the CLI loop.
+     *
+     * @param args Command-line arguments.
+     */
     public static void main(String[] args) {
         if (args.length < 1) {
             usage();
