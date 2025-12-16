@@ -83,56 +83,44 @@ public class Client {
         }
     }
 
-    public static void main(String[] args) {
-        if (args.length < 1) {
-            usage();
-            System.exit(0);
-        }
-
-        processArgs(args);
-
-        try (Socket socket = new Socket(address, serverPort);
-             MessageSocket ms = new MessageSocket(socket)) {
-
-            System.out.println("Connected to " + address + ":" + serverPort);
-            Sysetm.out.println("Type 'help' for commands. Type 'teardown' to exit.");
-            doCLI(ms);
-
-        } catch (IOException e) {
-            System.err.println("IO Error: " + e.getMessage());
-        }
-    }
-
     /**
      * Interactive CLI loop: stays connected until teardown is sent
      */
     public static void doCLI(MessageSocket ms) throws IOException {
+        String command;
         Scanner scan = new Scanner(System.in);
         boolean done = false;
 
-        while (!done) {
-            System.out.print("> ");
-            String command = scan.nextLine().trim().toLowerCase();
+        System.out.println("Connected to " + adress + ":" serverPort);
+        System.out.println("Please type 'help' for help or 'teardown' to exit the application")
 
-            switch (command) {
-                case "play":
-                    play(ms);
-                    break;
-                case "pause":
-                    pause(ms);
-                    break;
-                case "record":
-                    record(ms);
-                    break;
-                case "teardown":
-                    teardown(ms);
-                    done = true;
-                    break;
-                case "help":
-                    System.out.println("Commands: play, pause, record, teardown, help");
-                    break;
-                default:
-                    System.out.println("Unknown command: " + command);
+        while (!done) {
+            do {
+                Sysetm.out.print("> ");
+                command = scan.nextLine();
+                command = command.strip().toLowerCase();
+            } while (command.equals(""));
+
+            if (command.equals("teardown")) {
+                teardown(ms);
+                done = true;
+            }
+            else if (command.equals("plays")) {
+                play(ms);
+            }
+            else if (command.equals("pause")) {
+                pause(ms);
+            }
+            else if (command.equals("help")) {
+                System.out.println();
+                System.out.println("help\t\tdisplay this message.");
+                System.out.println("play\t\tstart playback");
+                System.out.println("pause\t\tpause playback");
+                System.out.println("record\t\trecord audio");
+                System.out.println("teardown\t\tend the session and exit")
+            }
+            else {
+                System.out.println("Error: \"" + command + "\" unknown";)
             }
         }
     }
@@ -186,4 +174,25 @@ public class Client {
         Message resp = ms.getMessage();
         System.out.println("Received:\n" + resp);
     }
+
+    /**
+     * The entry point
+     */
+    public static void main(String[] args) throws IOException {
+        if (args.length > 2)
+            usage();
+
+        processArgs(args);
+
+        try(Socket socket = new Socket(address, serverPort);
+        MessageSocket ms = new MessageSocket(socket)) {
+            doCLI(ms);
+        } catch (IOException e) {
+            System.err.println("client: " + e);
+            System.exit(1);
+        }
+
+        System.exit(0);
+    }
 }
+
