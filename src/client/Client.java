@@ -6,6 +6,7 @@ import merrimackutil.cli.LongOption;
 import merrimackutil.cli.OptionParser;
 import merrimackutil.util.Tuple;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Scanner;
