@@ -67,6 +67,10 @@ public class MessageSocket extends Socket {
      */
     public Message getMessage() throws RuntimeException {
 
+        while (!recv.hasNextLine()) {
+
+        }
+
         String temp;
 
         String stringMsg =
@@ -81,6 +85,13 @@ public class MessageSocket extends Socket {
                 recv.nextLine(); // Read the empty line
 
                 return new OptionsMessage(stringMsg);
+            case "DESCRIBE":
+
+                stringMsg += recv.nextLine() + "\r\n"; // Read the Accept line
+
+                recv.nextLine(); // Read the empty line
+
+                return new DescribeMessage(stringMsg);
             case "SETUP":
 
                 stringMsg += recv.nextLine() + "\r\n"; // Read the Transport line
@@ -93,15 +104,32 @@ public class MessageSocket extends Socket {
 
                 stringMsg += recv.nextLine() + "\r\n"; // Read the Session line
 
-                temp = recv.nextLine(); // Read the next line
-
-                if (temp.startsWith("Range:")) { // Check for Range line
-                    stringMsg += temp + "\r\n"; // Read the Range line if present
-
-                    recv.nextLine(); // Read the empty line
-                }
+                recv.nextLine(); // Read the empty line
 
                 return new PlayPauseMessage(stringMsg);
+            case "RECORD":
+
+                stringMsg += recv.nextLine() + "\r\n"; // Read the Session line
+
+                stringMsg += recv.nextLine() + "\r\n"; // Read the Range line
+
+                recv.nextLine();
+
+                return new RecordMessage(stringMsg);
+            case "TEARDOWN":
+                stringMsg += recv.nextLine() + "\r\n"; // Read the Session line
+
+                recv.nextLine(); // Read the empty line
+
+                return new TeardownMessage(stringMsg);
+            case "DATA":
+                stringMsg += recv.nextLine() + "\r\n"; // Read the Sequence Number line
+
+                stringMsg += recv.nextLine() + "\r\n"; // Read the Data line
+
+                recv.nextLine(); // Read the empty line
+
+                return new DataMessage(stringMsg);
             case "RTSP/1.0":
 
                 temp = recv.nextLine();
@@ -113,10 +141,10 @@ public class MessageSocket extends Socket {
                         temp = recv.nextLine();
                         if (temp.startsWith("Transport:")) {
                             stringMsg += temp + "\r\n"; // Transport line
+
+                            recv.nextLine(); // Read the empty line
                         }
                     }
-
-                    recv.nextLine(); // Read the empty line
 
                 } else if (temp.startsWith("Public:")) { // Check for Public line
                     stringMsg += temp + "\r\n"; // Public line
@@ -129,12 +157,16 @@ public class MessageSocket extends Socket {
                     stringMsg += "\r\n"; // Blank line
                     // Read content based on Content-Length
                     StringBuilder body = new StringBuilder();
-                    for (int i = 0; i < contentLength; i++) {
-                        body.append(recv.nextLine()).append("\n");
+                    while (recv.hasNextLine()) {
+                        String line = recv.nextLine();
+                        body.append(line).append("\n");
+                        if (body.length() >= contentLength) {
+                            break;
+                        }
                     }
                     stringMsg += body + "\r\n";
 
-                    recv.nextLine(); // Read the empty line
+                    System.out.println("Complete ServerResponse message:\n" + stringMsg);
                 }
 
                 return new ServerResponse(stringMsg);

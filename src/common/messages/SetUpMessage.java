@@ -53,17 +53,6 @@ public class SetUpMessage extends Message {
         return transport;
     }
 
-    public String getClientPort() {
-        String[] parts = transport.split(";");
-        for (String part : parts) {
-            part = part.trim();
-            if (part.startsWith("client_port=")) {
-                return part;
-            }
-        }
-        return null; // or throw an exception if preferred
-    }
-
     /**
      * Override toString to include sessionID and transport
      */
