@@ -77,23 +77,6 @@ public class Client {
         }
     }
 
-    public static void main(String[] args) {
-        if (args.length < 1) {
-            usage();
-        }
-
-        processArgs(args);
-
-        try (Socket socket = new Socket(address, serverPort);
-             MessageSocket ms = new MessageSocket(socket)) {
-
-            doCLI(ms);
-
-        } catch (IOException e) {
-            System.err.println("IO Error: " + e.getMessage());
-        }
-    }
-
     public static void doCLI(MessageSocket ms) throws IOException {
         Scanner scan = new Scanner(System.in);
         boolean done = false;
@@ -205,12 +188,28 @@ public class Client {
         System.out.println("Received:\n" + resp);
     }
 
-    // If you later allow RECORD after teardown/setup:
     private static void sendRecord(MessageSocket ms) throws IOException {
         Message record = new RecordMessage(address, cseq++, sessionID, "npt=0-30");
         ms.sendMessage(record);
         System.out.println("Sent:\n" + record);
         Message resp = ms.getMessage();
         System.out.println("Received:\n" + resp);
+    }
+
+    public static void main(String[] args) {
+        if (args.length < 1) {
+            usage();
+        }
+
+        processArgs(args);
+
+        try (Socket socket = new Socket(address, serverPort);
+             MessageSocket ms = new MessageSocket(socket)) {
+
+            doCLI(ms);
+
+        } catch (IOException e) {
+            System.err.println("IO Error: " + e.getMessage());
+        }
     }
 }
