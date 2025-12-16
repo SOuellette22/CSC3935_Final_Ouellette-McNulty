@@ -19,9 +19,6 @@ public class Client {
     private static int sessionID;
     private static boolean setupComplete = false;
 
-    /**
-     * Prints the usage message for the client application
-     */
     public static void usage() {
         System.out.println("Usage:");
         System.out.println("  client --server <addr>[:port]");
@@ -32,9 +29,6 @@ public class Client {
         System.exit(1);
     }
 
-    /**
-     * Processes command-line arguments
-     */
     public static void processArgs(String[] args) {
         OptionParser parser;
 
@@ -100,12 +94,10 @@ public class Client {
         }
     }
 
-    /**
-     * Interactive CLI loop: stays connected until teardown is sent
-     */
     public static void doCLI(MessageSocket ms) throws IOException {
         Scanner scan = new Scanner(System.in);
         boolean done = false;
+        boolean playStarted = false;   // track if PLAY has been issued
 
         System.out.println("Connected to " + address + ":" + serverPort);
         System.out.println("Type 'help' for commands. Type 'teardown' to exit.");
@@ -121,6 +113,7 @@ public class Client {
                 case "setup":
                     sendSetup(ms);
                     setupComplete = true;
+                    playStarted = false; // reset when starting a new session
                     break;
                 case "play":
                     if (!setupComplete) {
@@ -129,6 +122,7 @@ public class Client {
                         System.out.print("Enter file to play: ");
                         String file = scan.nextLine().trim();
                         sendPlay(ms, file);
+                        playStarted = true;
                     }
                     break;
                 case "pause":
@@ -139,10 +133,18 @@ public class Client {
                     }
                     break;
                 case "record":
-                    System.out.println("Recording requires a fresh session. Please TEARDOWN and SETUP again.");
+                    if (!setupComplete) {
+                        System.out.println("You must SETUP before RECORD.");
+                    } else if (playStarted) {
+                        System.out.println("Cannot RECORD after PLAY has started. Please TEARDOWN and SETUP again.");
+                    } else {
+                        sendRecord(ms);   // <-- now actually used
+                    }
                     break;
                 case "teardown":
                     sendTeardown(ms);
+                    setupComplete = false;
+                    playStarted = false;
                     done = true;
                     break;
                 case "help":
@@ -151,7 +153,7 @@ public class Client {
                     System.out.println("  setup     - reserve transport for session");
                     System.out.println("  play      - play a file (requires setup)");
                     System.out.println("  pause     - pause playback (requires setup)");
-                    System.out.println("  record    - record audio (requires new session)");
+                    System.out.println("  record    - record audio (requires setup, only before play)");
                     System.out.println("  teardown  - end session and exit");
                     break;
                 default:
@@ -160,8 +162,9 @@ public class Client {
         }
     }
 
+
     private static void sendOptions(MessageSocket ms) throws IOException {
-        Message options = new OptionsMessage(address, cseq++, "PLAY PAUSE TEARDOWN");
+        Message options = new OptionsMessage(address, cseq++, "PLAY PAUSE RECORD TEARDOWN");
         ms.sendMessage(options);
         System.out.println("Sent:\n" + options);
         Message resp = ms.getMessage();
@@ -198,6 +201,15 @@ public class Client {
         Message teardown = new TeardownMessage(address, cseq++, sessionID);
         ms.sendMessage(teardown);
         System.out.println("Sent:\n" + teardown);
+        Message resp = ms.getMessage();
+        System.out.println("Received:\n" + resp);
+    }
+
+    // If you later allow RECORD after teardown/setup:
+    private static void sendRecord(MessageSocket ms) throws IOException {
+        Message record = new RecordMessage(address, cseq++, sessionID, "npt=0-30");
+        ms.sendMessage(record);
+        System.out.println("Sent:\n" + record);
         Message resp = ms.getMessage();
         System.out.println("Received:\n" + resp);
     }
