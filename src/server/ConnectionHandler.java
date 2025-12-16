@@ -6,9 +6,7 @@ import merrimackutil.net.Log;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.net.ServerSocket;
-import java.util.Arrays;
 import java.util.Random;
 
 public class ConnectionHandler extends Thread {
