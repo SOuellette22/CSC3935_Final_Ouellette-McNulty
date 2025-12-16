@@ -127,9 +127,11 @@ public class Client {
                     } else if (playStarted) {
                         System.out.println("Cannot RECORD after PLAY has started. Please TEARDOWN and SETUP again.");
                     } else {
+                        System.out.print("File path on server to save to: ");
+                        String file = scan.nextLine().trim();
                         System.out.print("Enter file path to record: ");
                         String filePath = scan.nextLine().trim();
-                        sendRecord(ms, filePath);
+                        sendRecord(ms, file, filePath);
                     }
                     break;
                 case "teardown":
@@ -263,14 +265,24 @@ public class Client {
         }
     }
 
-    private static void sendRecord(MessageSocket ms, String filePath) throws IOException {
+    private static void sendRecord(MessageSocket ms, String file, String filePath) throws IOException {
         // Construct a RECORD message with the file path included in the header
-        Message record = new RecordMessage("rtsp://" + address + ":" + serverPort + "/" + filePath, cseq++, sessionID, "npt=0-30");
+        Message record = new RecordMessage("rtsp://" + address + ":" + serverPort + "/" + file, cseq++, sessionID, "npt=0-30");
         ms.sendMessage(record);
-        System.out.println("Sent:\n" + record);
 
         Message resp = ms.getMessage();
-        System.out.println("Received:\n" + resp);
+
+        if (resp instanceof ServerResponse serverResp) {
+            if (serverResp.getCode() == 200) {
+                System.out.println("Recording started. Saving to file: " + file);
+                SendSong recorder = new SendSong(playbackSocket, new File(filePath), sessionID);
+                recorder.start();
+            } else {
+                System.out.println("Failed to start recording. Server response:\n" + serverResp.getMessage());
+            }
+        } else {
+            System.out.println("Received Bad Message:\n" + resp);
+        }
     }
 
 

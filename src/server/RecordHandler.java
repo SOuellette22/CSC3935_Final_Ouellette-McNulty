@@ -41,7 +41,7 @@ public class RecordHandler extends Thread {
         while (!(msg.getHeader().equals("END"))) {
 
             // Process only Data messages
-            if (msg.getHeader().equals("Data") && ((DataMessage) msg).getSessionID() == sessionId) {
+            if (msg.getHeader().equals("DATA") && ((DataMessage) msg).getSessionID() == sessionId) {
                 // Extract payload and decode from Base64
                 String payload = ((DataMessage) msg).getPayload();
                 byte[] chunk = Base64.getDecoder().decode(payload);

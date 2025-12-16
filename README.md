@@ -23,9 +23,16 @@ java -jar dist/server.jar
 java -jar dist/client.jar
 ```
 
+## Usage
+
+This application only allows for .WAV files to be streamed. So here is a converter so you can convert other audio file types to .WAV:
+[Online Audio Converter](https://www.freeconvert.com/mp3-to-wav/download)
+
+To get some free audio you can go to YouTube studio and download then you will just need to turn them into .WAV files.
+
 # Protocol Documentation
 
-This is in our github wiki
+This is in our GitHub wiki
 
 # Contributors
 
