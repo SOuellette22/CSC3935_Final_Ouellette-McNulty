@@ -121,7 +121,9 @@ public class Client {
                     } else if (playStarted) {
                         System.out.println("Cannot RECORD after PLAY has started. Please TEARDOWN and SETUP again.");
                     } else {
-                        sendRecord(ms);   // <-- now actually used
+                        System.out.print("Enter file path to record: ");
+                        String filePath = scan.nextLine().trim();
+                        sendRecord(ms, filePath);
                     }
                     break;
                 case "teardown":
