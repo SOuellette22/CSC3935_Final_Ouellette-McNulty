@@ -23,6 +23,10 @@ java -jar dist/server.jar
 java -jar dist/client.jar
 ```
 
+# Protocol Documentation
+
+This is in our github wiki
+
 # Contributors
 
 Sean Ouellette
