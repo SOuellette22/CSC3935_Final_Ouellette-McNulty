@@ -1,5 +1,7 @@
 package common.messages;
 
+import java.util.Arrays;
+
 public class Message {
 
     protected String messageString;

@@ -244,14 +244,14 @@ public class ConnectionHandler extends Thread {
                         break;
                     }
 
-                    playHandler.pausePlayback();
-                    playHandler = null;
-
                     msg = new ServerResponse.ResponseBuilder(200, msg.getCseq())
                             .build();
                     state = RTSPSates.TEARDOWN;
                     socket.sendMessage(msg);
                     logger.log("INFO: Sent TEARDOWN response.");
+
+                    playHandler.pausePlayback();
+                    playHandler = null;
                 }
                 default -> {
                     msg = new ServerResponse.ResponseBuilder(400, msg.getCseq())

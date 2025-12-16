@@ -14,16 +14,6 @@ public class PlayPauseMessage extends Message {
     }
 
     /**
-     * Constructor creates a new PLAY/PAUSE message from parameters
-     */
-    public PlayPauseMessage(String type, String header, int cseq, int sessionID, String range) {
-        super(type, header, cseq);
-
-        this.sessionID = sessionID;
-        this.range = range;
-    }
-
-    /**
      * Constructor creates a new PLAY/PAUSE message from a message string
      */
     public PlayPauseMessage(String messageString) {

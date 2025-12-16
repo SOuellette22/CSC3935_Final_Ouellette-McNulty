@@ -4,14 +4,6 @@ public class OptionsMessage extends Message {
 
     private String options;
 
-    /**
-     * Constructor creates a new OPTIONS message from parameters
-     */
-    public OptionsMessage(String header, int cseq, String options) {
-        super("OPTIONS", header, cseq);
-        this.options = options;
-    }
-
     public OptionsMessage(String header, int cseq) {
         super("OPTIONS", header, cseq);
     }

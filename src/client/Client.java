@@ -18,6 +18,9 @@ public class Client {
     private static int cseq = 1;
     private static int sessionID;
     private static boolean setupComplete = false;
+    private static MessageSocket playbackSocket = null;
+    private static PlaySong player = null;
+    private static String playingFile = "";
 
     public static void usage() {
         System.out.println("Usage:");
@@ -102,9 +105,11 @@ public class Client {
                     if (!setupComplete) {
                         System.out.println("You must SETUP before PLAY.");
                     } else {
-                        System.out.print("Enter file to play: ");
-                        String file = scan.nextLine().trim();
-                        sendPlay(ms, file);
+                        if (player == null) {
+                            System.out.print("Enter file to play: ");
+                            playingFile = scan.nextLine().trim();
+                        }
+                        sendPlay(ms, playingFile);
                         playStarted = true;
                     }
                     break;
@@ -149,57 +154,117 @@ public class Client {
 
 
     private static void sendOptions(MessageSocket ms) throws IOException {
-        Message options = new OptionsMessage(address, cseq++, "PLAY PAUSE RECORD TEARDOWN");
+        Message options = new OptionsMessage("rtsp://" + address + ":" + serverPort, cseq++);
         ms.sendMessage(options);
-        System.out.println("Sent:\n" + options);
         Message resp = ms.getMessage();
-        System.out.println("Received:\n" + resp);
+        if (resp instanceof ServerResponse respServer) {
+            System.out.println("Server Capabilities:\n" + respServer.getOptions());
+        } else {
+            System.out.println("Received Bad Message:\n" + resp);
+        }
+    }
+
+    private static void sendDescribe(MessageSocket ms) throws IOException {
+        Message describe = new DescribeMessage("rtsp://" + address + ":" + serverPort, cseq++, "application/sdp");
+        ms.sendMessage(describe);
+        Message resp = ms.getMessage();
+        if (resp instanceof ServerResponse respServer) {
+            if (respServer.getCode() != 200) {
+                System.out.println("Failed to get description. Server response:\n" + respServer.getMessage());
+                return;
+            }
+            System.out.println("Description:\n" + respServer.getContentType() + "\n" + respServer.getBody());
+        } else {
+            System.out.println("Received Bad Message:\n" + resp);
+        }
     }
 
     private static void sendSetup(MessageSocket ms) throws IOException {
-        Message setup = new SetUpMessage(address, cseq++, "RTP/AVP;unicast;client_port=8000-8001");
+        Message setup = new SetUpMessage("rtsp://" + address + ":" + serverPort, cseq++, "RTP/AVP;unicast;client_port=8000-8001");
         ms.sendMessage(setup);
-        System.out.println("Sent:\n" + setup);
 
         Message resp = ms.getMessage();
-        System.out.println("Received:\n" + resp);
 
-        if (resp instanceof ServerResponse) {
-            ServerResponse serverResp = (ServerResponse) resp;
+        if (resp instanceof ServerResponse serverResp) {
+            if (serverResp.getCode() != 200) {
+                System.out.println("Failed to setup session. Server response:\n" + serverResp.getMessage());
+                return;
+            }
             sessionID = serverResp.getSessionId();   // <-- capture session ID
-            System.out.println("Session ID set to: " + sessionID);
+            String port = serverResp.getTransport().split("server_port=")[1];
+            playbackSocket = new MessageSocket(address, Integer.parseInt(port));
+            System.out.println("Setup was Successful");
         } else {
             System.out.println("Warning: SETUP response did not include a session ID.");
         }
     }
 
     private static void sendPlay(MessageSocket ms, String file) throws IOException {
-        Message play = new PlayPauseMessage("PLAY", address + "/" + file, cseq++, sessionID, "npt=0-");
+        Message play = new PlayPauseMessage("PLAY", "rtsp://" + address + ":" + serverPort + "/" + file, cseq++, sessionID);
         ms.sendMessage(play);
-        System.out.println("Sent:\n" + play);
         Message resp = ms.getMessage();
-        System.out.println("Received:\n" + resp);
+
+        if (resp instanceof ServerResponse serverResp) {
+            if (serverResp.getCode() == 200) {
+                if (player != null) {
+                    System.out.println("Resume Playing");
+                    player.pausePlayback();
+                } else {
+                    System.out.println("Playback started for file: " + file);
+                    player = new PlaySong(playbackSocket, sessionID);
+                    player.start();
+                }
+            } else {
+                System.out.println("Failed to start playback. Server response:\n" + serverResp.getMessage());
+            }
+        } else {
+            System.out.println("Received Bad Message:\n" + resp);
+        }
     }
 
     private static void sendPause(MessageSocket ms) throws IOException {
-        Message pause = new PlayPauseMessage("PAUSE", address, cseq++, sessionID);
+        Message pause = new PlayPauseMessage("PAUSE", "rtsp://" + address + ":" + serverPort, cseq++, sessionID);
         ms.sendMessage(pause);
-        System.out.println("Sent:\n" + pause);
         Message resp = ms.getMessage();
-        System.out.println("Received:\n" + resp);
+
+        if (resp instanceof ServerResponse serverResp) {
+            if (serverResp.getCode() == 200) {
+                if (player != null) {
+                    player.pausePlayback();
+                    System.out.println("Playback paused.");
+                }
+            } else {
+                System.out.println("Failed to start playback. Server response:\n" + serverResp.getMessage());
+            }
+        } else {
+            System.out.println("Received Bad Message:\n" + resp);
+        }
+
     }
 
     private static void sendTeardown(MessageSocket ms) throws IOException {
-        Message teardown = new TeardownMessage(address, cseq++, sessionID);
+        Message teardown = new TeardownMessage("rtsp://" + address + ":" + serverPort, cseq++, sessionID);
         ms.sendMessage(teardown);
-        System.out.println("Sent:\n" + teardown);
+
         Message resp = ms.getMessage();
-        System.out.println("Received:\n" + resp);
+
+        if (resp instanceof ServerResponse serverResp) {
+            if (serverResp.getCode() == 200) {
+                System.out.println("Session torn down successfully.");
+                player.pausePlayback();
+                player = null;
+                playbackSocket.close();
+            } else {
+                System.out.println("Failed to teardown session. Server response:\n" + serverResp.getMessage());
+            }
+        } else {
+            System.out.println("Received Bad Message:\n" + resp);
+        }
     }
 
     private static void sendRecord(MessageSocket ms, String filePath) throws IOException {
         // Construct a RECORD message with the file path included in the header
-        Message record = new RecordMessage(address + "/" + filePath, cseq++, sessionID, "npt=0-30");
+        Message record = new RecordMessage("rtsp://" + address + ":" + serverPort + "/" + filePath, cseq++, sessionID, "npt=0-30");
         ms.sendMessage(record);
         System.out.println("Sent:\n" + record);
 
